@@ -673,6 +673,7 @@ ADKinetix::ADKinetix(int deviceIndex, const char *portName)
                 } else {
                     INFO("Registered EOF callback function.");
 
+                    /*
                     // Spawn the monitoring thread. Make sure it's joinable.
                     INFO("Spawning camera monitor thread...");
                     this->monitoringActive = true;
@@ -684,6 +685,7 @@ ADKinetix::ADKinetix(int deviceIndex, const char *portName)
 
                     this->monitorThreadId = epicsThreadCreateOpt(
                         "acquisitionThread", (EPICSTHREADFUNC)monitorThreadC, this, &opts);
+                    */
                 }
             }
         }
@@ -1200,10 +1202,12 @@ ADKinetix::~ADKinetix() {
     // Stop acquisiton if active
     this->acquireStop();
 
+    /*
     // shut down separate threads
     this->monitoringActive = false;
     printf("Shutting down monitor thread...\n");
     epicsThreadMustJoin(this->monitorThreadId);
+    */
 
     // close camera if open
     if (this->cameraContext != NULL && this->cameraContext->isCamOpen) {
