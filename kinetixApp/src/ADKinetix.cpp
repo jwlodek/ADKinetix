@@ -683,7 +683,7 @@ ADKinetix::ADKinetix(int deviceIndex, const char *portName)
                     opts.joinable = 1;
 
                     this->monitorThreadId = epicsThreadCreateOpt(
-                        "acquisitionThread", (EPICSTHREADFUNC)monitorThreadC, this, &opts);
+                        "monitorThread", (EPICSTHREADFUNC)monitorThreadC, this, &opts);
                 }
             }
         }
