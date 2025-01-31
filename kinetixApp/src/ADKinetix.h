@@ -163,6 +163,7 @@ class ADKinetix : public ADDriver {
     NDDataType_t getCurrentNDBitDepth();
     CameraContext* cameraContext;
     bool acquisitionActive = false;
+    bool pollingTemperature = false;
     bool monitoringActive = false;
     int deviceIndex;
     void* frameBuffer = nullptr;

@@ -704,6 +704,7 @@ void ADKinetix::monitorThread() {
     while (this->monitoringActive) {
         // Only check temp if not acquiring
         if (!this->acquisitionActive) {
+            this->pollingTemperature = true;
             int16 temperature = 0;
             if (PV_OK != pl_get_param(this->cameraContext->hcam, PARAM_TEMP, ATTR_CURRENT,
                                       (void *)&temperature)) {
@@ -712,6 +713,7 @@ void ADKinetix::monitorThread() {
                 setDoubleParam(KTX_Temperature, (double)(temperature / 100.0));
                 callParamCallbacks();
             }
+            this->pollingTemperature = false;
         }
 
         epicsThreadSleep(1);
@@ -889,6 +891,10 @@ void ADKinetix::acquisitionThread() {
     const int16 circBuffMode = CIRC_OVERWRITE;
 
     this->acquisitionActive = true;
+
+    // Spin in place a bit to make sure the temp thread is not actively polling the camera
+    while (this->pollingTemperature);
+
     INFO("Acquisition thread active.");
 
     INFO("Resetting image counter...");
