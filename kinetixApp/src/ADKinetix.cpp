@@ -1128,9 +1128,9 @@ asynStatus ADKinetix::writeInt32(asynUser *pasynUser, epicsInt32 value) {
     callParamCallbacks();
 
     if (status != asynSuccess) {
-        ERR_ARGS("error, status=%d function=%d, value=%f", status, function, value);
+        ERR_ARGS("error, status=%d function=%d, value=%d", status, function, value);
     } else {
-        DEBUG_ARGS("function=%d, value=%f", function, value);
+        DEBUG_ARGS("function=%d, value=%d", function, value);
     }
 
     return status;
