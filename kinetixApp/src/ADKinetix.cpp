@@ -747,10 +747,11 @@ void ADKinetix::acquireStop() {
     if (this->acquisitionActive) {
         // Abort current acquisition
         pl_exp_abort(this->cameraContext->hcam, CCS_HALT);
+
+        // Mark acquisition as inactive
         this->acquisitionActive = false;
 
-        // Set acquire PV to 0, wait for acq thread to join
-        setIntegerParam(ADAcquire, 0);
+        // Wait for acquisition thread to join
         INFO("Waiting for acquisition thread to join...");
         epicsThreadMustJoin(this->acquisitionThreadId);
         INFO("Acquisition stopped.");
@@ -772,10 +773,10 @@ NDDataType_t ADKinetix::getCurrentNDBitDepth() {
     getIntegerParam(KTX_ReadoutPortIdx, &readoutPortIdx);
     getIntegerParam(KTX_SpeedIdx, &speedIdx);
     getIntegerParam(KTX_GainIdx, &gainIdx);
+    SpdtabGain currentGainMode = this->cameraContext->speedTable[readoutPortIdx].speeds[speedIdx].gains[gainIdx];
 
     NDDataType_t dataType = NDUInt8;
-    if (this->cameraContext->speedTable[readoutPortIdx].speeds[speedIdx].gains[gainIdx].bitDepth !=
-        8) {
+    if (currentGainMode.bitDepth != 8) {
         dataType = NDUInt16;
     }
     return dataType;
@@ -1081,20 +1082,23 @@ asynStatus ADKinetix::setMinExpRes(KTX_MIN_EXP_RES currentExpRes, KTX_MIN_EXP_RE
 asynStatus ADKinetix::writeInt32(asynUser *pasynUser, epicsInt32 value) {
     const char *functionName = "writeInt32";
     int function = pasynUser->reason;
-    int currentExpRes;
+    int currentExpRes, acquiring;
     asynStatus status = asynSuccess;
 
     // Need to know current exp res when switching in case we cannot update
     getIntegerParam(KTX_MinExpRes, &currentExpRes);
+
+    // Certain actions depend on whether or not we are currently acquiring
+    getIntegerParam(ADAcquire, &acquiring);
 
     /* Set the parameter and readback in the parameter library.  This may be overwritten when we
      * read back the status at the end, but that's OK */
     status = setIntegerParam(function, value);
 
     if (function == ADAcquire) {
-        if (this->acquisitionActive && value == 0) {
+        if (acquiring == 1 && value == 0) {
             this->acquireStop();
-        } else if (!this->acquisitionActive && value == 1) {
+        } else if (acquiring == 0 && value == 1) {
             this->acquireStart();
         } else if (value == 0) {
             ERR("Acquisition not active!");
