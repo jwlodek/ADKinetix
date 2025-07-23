@@ -28,8 +28,8 @@ to cope properly with C++ definitions.
   #define PV_DECL
   #define DEPRECATED __attribute__((deprecated))
 #elif defined(__APPLE__)
-  #error TODO: Declare PV_DECL calling convention
-  #error TODO: Declare DEPRECATED definition
+  #define PV_DECL
+  #define DEPRECATED __attribute__((deprecated))
 #endif
 
 /******************************************************************************/
