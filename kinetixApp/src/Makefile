@@ -3,7 +3,7 @@ include $(TOP)/configure/CONFIG
 #----------------------------------------
 #  ADD MACRO DEFINITIONS AFTER THIS LINE
 #=============================
-LIBRARY_NAME = ADKinetix 
+LIBRARY_NAME = ADKinetix
 
 USR_CFLAGS_WIN32 +=   -DWIN32
 USR_CXXFLAGS_WIN32 += -DWIN32
@@ -29,4 +29,3 @@ include $(ADCORE)/ADApp/commonLibraryMakefile
 include $(TOP)/configure/RULES
 #----------------------------------------
 #  ADD RULES AFTER THIS LINE
-

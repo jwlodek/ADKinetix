@@ -34,5 +34,3 @@ Tagged source code releases can be obtained at https://github.com/NSLS-II/ADKine
 * Ran camera at full speed over PCIE, with up to 300 Hz in `Speed` mode.
 * Include expert OPI screen.
 * Include documentation for confiugration.
-
-

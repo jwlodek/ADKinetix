@@ -170,6 +170,6 @@ class ADKinetix : public ADDriver {
     epicsThreadId monitorThreadId, acquisitionThreadId;
 };
 
-#define NUM_KTX_PARAMS ((int)(&LAST_KTX_PARAM - &FIRST_KTX_PARAM + 1))
+#define NUM_KTX_PARAMS ((int) (&LAST_KTX_PARAM - &FIRST_KTX_PARAM + 1))
 
 #endif

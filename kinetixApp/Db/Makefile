@@ -21,4 +21,3 @@ DB += ADKinetix_settings.req
 include $(TOP)/configure/RULES
 #----------------------------------------
 #  ADD RULES AFTER THIS LINE
-
