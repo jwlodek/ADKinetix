@@ -438,6 +438,7 @@ void ADKinetix::updateImageFormat() {
                               (void *) &imageFormat))
         return;
 
+    DEBUG_ARGS("Detected image format %d for selected mode", imageFormat);
     this->cameraContext->imageFormat = imageFormat;
 }
 
@@ -512,7 +513,6 @@ void ADKinetix::getCurrentFrameDimensions(size_t *dims) {
 ADKinetix::ADKinetix(int deviceIndex, const char *portName)
     : ADDriver(portName, 1, NUM_KTX_PARAMS, 0, 0, 0, 0, 0, 1, 0, 0) {
     const char *functionName = "ADKinetix";
-    asynStatus status = asynSuccess;
 
     // Initialize new parameters in parameter library
     createParam(KTX_TemperatureString, asynParamFloat64, &KTX_Temperature);
@@ -574,7 +574,7 @@ ADKinetix::ADKinetix(int deviceIndex, const char *portName)
                 ERR_ARGS("Failed to open camera with name %s", this->cameraContext->camName);
             } else {
                 this->cameraContext->isCamOpen = true;
-                INFO_ARGS("Opened camera...", this->cameraContext->camName);
+                INFO_ARGS("Opened camera %s...", this->cameraContext->camName);
 
                 // Camera is opened, collect model number, serial, and firmware information
                 uns16 fwVersion;
@@ -699,7 +699,6 @@ ADKinetix::ADKinetix(int deviceIndex, const char *portName)
  */
 void ADKinetix::monitorThread() {
     const char *functionName = "monitorThread";
-    int acquiring;
 
     INFO("Temperature monitor thread active.");
 
@@ -792,10 +791,10 @@ void ADKinetix::updateReadoutPortDesc() {
     const char *functionName = "updateReadoutPortDesc";
 
     // Get
-    int readoutPortIdx, speedIdx, gainIdx;
-    getIntegerParam(KTX_ReadoutPortIdx, &readoutPortIdx);
-    getIntegerParam(KTX_SpeedIdx, &speedIdx);
-    getIntegerParam(KTX_GainIdx, &gainIdx);
+    size_t readoutPortIdx, speedIdx, gainIdx;
+    getIntegerParam(KTX_ReadoutPortIdx, (int *) &readoutPortIdx);
+    getIntegerParam(KTX_SpeedIdx, (int *) &speedIdx);
+    getIntegerParam(KTX_GainIdx, (int *) &gainIdx);
 
     int valid = 1;
 
@@ -849,10 +848,10 @@ void ADKinetix::updateReadoutPortDesc() {
  */
 void ADKinetix::acquisitionThread() {
     const char *functionName = "acquisitionThread";
-    int acquiring, acquisitionMode, targetNumImages, collectedImages, triggerMode, stopAcqOnTO,
-        waitForFrameTO, modeValid, minExpRes;
+    int acquisitionMode, targetNumImages, collectedImages, triggerMode, stopAcqOnTO, waitForFrameTO,
+        modeValid, minExpRes;
     bool eofSuccess;
-    double exposureTime, acquirePeriod;
+    double exposureTime;
     int16 pvcamExposureMode;
     NDArray *pArray;
     NDArrayInfo arrayInfo;
@@ -957,7 +956,6 @@ void ADKinetix::acquisitionThread() {
             if (this->pArrays[0] != NULL) {
                 pArray = this->pArrays[0];
             } else {
-                this->pArrays[0]->release();
                 ERR("Failed to allocate array!");
                 setIntegerParam(ADStatus, ADStatusError);
                 if (acquisitionMode == ADImageSingle)
@@ -1192,6 +1190,8 @@ asynStatus ADKinetix::writeFloat64(asynUser *pasynUser, epicsFloat64 value) {
  */
 void ADKinetix::report(FILE *fp, int details) {
     const char *functionName = "report";
+
+    DEBUG("Logging driver information...");
 
     fprintf(fp, "Kinetix %s\n", this->portName);
     if (details > 0) {
