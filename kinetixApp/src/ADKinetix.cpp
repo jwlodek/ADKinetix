@@ -790,7 +790,7 @@ NDDataType_t ADKinetix::getCurrentNDBitDepth() {
 void ADKinetix::updateReadoutPortDesc() {
     const char *functionName = "updateReadoutPortDesc";
 
-    // Get
+    // Get readout port information
     size_t readoutPortIdx, speedIdx, gainIdx;
     getIntegerParam(KTX_ReadoutPortIdx, (int *) &readoutPortIdx);
     getIntegerParam(KTX_SpeedIdx, (int *) &speedIdx);
