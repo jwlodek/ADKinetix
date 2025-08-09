@@ -42,4 +42,3 @@ ifdef T_A
 endif
 
 -include $(TOP)/configure/CONFIG_SITE.local
-
