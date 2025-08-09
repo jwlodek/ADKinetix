@@ -9,3 +9,4 @@ envPaths
 dllPath.bat
 *.sav*
 include/
+*.local
