@@ -791,21 +791,22 @@ void ADKinetix::updateReadoutPortDesc() {
     const char *functionName = "updateReadoutPortDesc";
 
     // Get readout port information
-    size_t readoutPortIdx, speedIdx, gainIdx;
-    getIntegerParam(KTX_ReadoutPortIdx, (int *) &readoutPortIdx);
-    getIntegerParam(KTX_SpeedIdx, (int *) &speedIdx);
-    getIntegerParam(KTX_GainIdx, (int *) &gainIdx);
+    int readoutPortIdx, speedIdx, gainIdx;
+    getIntegerParam(KTX_ReadoutPortIdx, &readoutPortIdx);
+    getIntegerParam(KTX_SpeedIdx, &speedIdx);
+    getIntegerParam(KTX_GainIdx, &gainIdx);
 
     int valid = 1;
 
-    if (this->cameraContext->speedTable.size() > readoutPortIdx) {
+    if (this->cameraContext->speedTable.size() > (size_t) readoutPortIdx) {
         setStringParam(KTX_ReadoutPortDesc,
                        this->cameraContext->speedTable[readoutPortIdx].name.c_str());
     } else {
         setStringParam(KTX_ReadoutPortDesc, "Not Available");
         valid = 0;
     }
-    if (valid == 1 && this->cameraContext->speedTable[readoutPortIdx].speeds.size() > speedIdx) {
+    if (valid == 1 &&
+        this->cameraContext->speedTable[readoutPortIdx].speeds.size() > (size_t) speedIdx) {
         char speedDesc[40];
         snprintf(speedDesc, 40, "Pixel time: %d ns",
                  this->cameraContext->speedTable[readoutPortIdx].speeds[speedIdx].pixTimeNs);
@@ -815,7 +816,8 @@ void ADKinetix::updateReadoutPortDesc() {
         valid = 0;
     }
     if (valid == 1 &&
-        this->cameraContext->speedTable[readoutPortIdx].speeds[speedIdx].gains.size() > gainIdx) {
+        this->cameraContext->speedTable[readoutPortIdx].speeds[speedIdx].gains.size() >
+            (size_t) gainIdx) {
         char gainDescStr[40];
         snprintf(gainDescStr, 40, "%s, %d bpp",
                  this->cameraContext->speedTable[readoutPortIdx]
