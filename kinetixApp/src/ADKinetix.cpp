@@ -222,6 +222,7 @@ void ADKinetix::selectSpeedTableMode() {
     if (PV_OK != pl_set_param(this->cameraContext->hcam, PARAM_READOUT_PORT,
                               (void *) &this->cameraContext->speedTable[readoutPortIdx].value)) {
         reportKinetixError(functionName);
+        this->speedTableModeSelected = false;
         return;
     }
     INFO_ARGS("Readout port set to '%s'",
@@ -232,6 +233,7 @@ void ADKinetix::selectSpeedTableMode() {
             this->cameraContext->hcam, PARAM_SPDTAB_INDEX,
             (void *) &this->cameraContext->speedTable[readoutPortIdx].speeds[speedIdx].index)) {
         reportKinetixError(functionName);
+        this->speedTableModeSelected = false;
         return;
     }
     INFO_ARGS("Readout speed set to %d ns per pix",
@@ -243,6 +245,7 @@ void ADKinetix::selectSpeedTableMode() {
                                   .gains[gainIdx]
                                   .index)) {
         reportKinetixError(functionName);
+        this->speedTableModeSelected = false;
         return;
     }
     INFO_ARGS("Gain set to %s", this->cameraContext->speedTable[readoutPortIdx]
@@ -265,6 +268,7 @@ void ADKinetix::selectSpeedTableMode() {
     } else
         this->cameraContext->imageFormat = PL_IMAGE_FORMAT_MONO8;
 
+    this->speedTableModeSelected = true;
     callParamCallbacks();
 }
 
@@ -791,21 +795,22 @@ void ADKinetix::updateReadoutPortDesc() {
     const char *functionName = "updateReadoutPortDesc";
 
     // Get readout port information
-    size_t readoutPortIdx, speedIdx, gainIdx;
-    getIntegerParam(KTX_ReadoutPortIdx, (int *) &readoutPortIdx);
-    getIntegerParam(KTX_SpeedIdx, (int *) &speedIdx);
-    getIntegerParam(KTX_GainIdx, (int *) &gainIdx);
+    int readoutPortIdx, speedIdx, gainIdx;
+    getIntegerParam(KTX_ReadoutPortIdx, &readoutPortIdx);
+    getIntegerParam(KTX_SpeedIdx, &speedIdx);
+    getIntegerParam(KTX_GainIdx, &gainIdx);
 
     int valid = 1;
 
-    if (this->cameraContext->speedTable.size() > readoutPortIdx) {
+    if (this->cameraContext->speedTable.size() > (size_t) readoutPortIdx) {
         setStringParam(KTX_ReadoutPortDesc,
                        this->cameraContext->speedTable[readoutPortIdx].name.c_str());
     } else {
         setStringParam(KTX_ReadoutPortDesc, "Not Available");
         valid = 0;
     }
-    if (valid == 1 && this->cameraContext->speedTable[readoutPortIdx].speeds.size() > speedIdx) {
+    if (valid == 1 &&
+        this->cameraContext->speedTable[readoutPortIdx].speeds.size() > (size_t) speedIdx) {
         char speedDesc[40];
         snprintf(speedDesc, 40, "Pixel time: %d ns",
                  this->cameraContext->speedTable[readoutPortIdx].speeds[speedIdx].pixTimeNs);
@@ -815,7 +820,8 @@ void ADKinetix::updateReadoutPortDesc() {
         valid = 0;
     }
     if (valid == 1 &&
-        this->cameraContext->speedTable[readoutPortIdx].speeds[speedIdx].gains.size() > gainIdx) {
+        this->cameraContext->speedTable[readoutPortIdx].speeds[speedIdx].gains.size() >
+            (size_t) gainIdx) {
         char gainDescStr[40];
         snprintf(gainDescStr, 40, "%s, %d bpp",
                  this->cameraContext->speedTable[readoutPortIdx]
@@ -849,7 +855,7 @@ void ADKinetix::updateReadoutPortDesc() {
 void ADKinetix::acquisitionThread() {
     const char *functionName = "acquisitionThread";
     int acquisitionMode, targetNumImages, collectedImages, triggerMode, stopAcqOnTO, waitForFrameTO,
-        modeValid, minExpRes;
+        minExpRes;
     bool eofSuccess;
     double exposureTime;
     int16 pvcamExposureMode;
@@ -863,10 +869,8 @@ void ADKinetix::acquisitionThread() {
     NDDataType_t dataType = getCurrentNDBitDepth();
     getCurrentFrameDimensions(dims);
 
-    // Make sure currently selected readout mode is valid
-    getIntegerParam(KTX_ModeValid, &modeValid);
-    if (modeValid == 0) {
-        ERR("Selected mode invalid! Check readout settings!");
+    if (!this->speedTableModeSelected) {
+        ERR("No speed table mode selected! Please check readout mode settings!");
         this->acquisitionActive = false;
         setIntegerParam(ADStatus, ADStatusError);
         setIntegerParam(ADAcquire, 0);
