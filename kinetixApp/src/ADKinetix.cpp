@@ -222,6 +222,7 @@ void ADKinetix::selectSpeedTableMode() {
     if (PV_OK != pl_set_param(this->cameraContext->hcam, PARAM_READOUT_PORT,
                               (void *) &this->cameraContext->speedTable[readoutPortIdx].value)) {
         reportKinetixError(functionName);
+        this->speedTableModeSelected = false;
         return;
     }
     INFO_ARGS("Readout port set to '%s'",
@@ -232,6 +233,7 @@ void ADKinetix::selectSpeedTableMode() {
             this->cameraContext->hcam, PARAM_SPDTAB_INDEX,
             (void *) &this->cameraContext->speedTable[readoutPortIdx].speeds[speedIdx].index)) {
         reportKinetixError(functionName);
+        this->speedTableModeSelected = false;
         return;
     }
     INFO_ARGS("Readout speed set to %d ns per pix",
@@ -243,6 +245,7 @@ void ADKinetix::selectSpeedTableMode() {
                                   .gains[gainIdx]
                                   .index)) {
         reportKinetixError(functionName);
+        this->speedTableModeSelected = false;
         return;
     }
     INFO_ARGS("Gain set to %s", this->cameraContext->speedTable[readoutPortIdx]
@@ -265,6 +268,7 @@ void ADKinetix::selectSpeedTableMode() {
     } else
         this->cameraContext->imageFormat = PL_IMAGE_FORMAT_MONO8;
 
+    this->speedTableModeSelected = true;
     callParamCallbacks();
 }
 
@@ -851,7 +855,7 @@ void ADKinetix::updateReadoutPortDesc() {
 void ADKinetix::acquisitionThread() {
     const char *functionName = "acquisitionThread";
     int acquisitionMode, targetNumImages, collectedImages, triggerMode, stopAcqOnTO, waitForFrameTO,
-        modeValid, minExpRes;
+        minExpRes;
     bool eofSuccess;
     double exposureTime;
     int16 pvcamExposureMode;
@@ -865,10 +869,8 @@ void ADKinetix::acquisitionThread() {
     NDDataType_t dataType = getCurrentNDBitDepth();
     getCurrentFrameDimensions(dims);
 
-    // Make sure currently selected readout mode is valid
-    getIntegerParam(KTX_ModeValid, &modeValid);
-    if (modeValid == 0) {
-        ERR("Selected mode invalid! Check readout settings!");
+    if (!this->speedTableModeSelected) {
+        ERR("No speed table mode selected! Please check readout mode settings!");
         this->acquisitionActive = false;
         setIntegerParam(ADStatus, ADStatusError);
         setIntegerParam(ADAcquire, 0);
