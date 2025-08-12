@@ -473,14 +473,17 @@ void ADKinetix::updateCameraRegion() {
     const char *functionName = "updateCameraRegion";
 
     // Get region dimensions and binning from EPICS
-    int regionStartX, regionStartY, regionStopX, regionStopY, binX, binY;
+    int regionStartX, regionStartY, regionSizeX, regionSizeY, binX, binY;
 
     getIntegerParam(ADMinX, &regionStartX);
-    getIntegerParam(ADSizeX, &regionStopX);
+    getIntegerParam(ADSizeX, &regionSizeX);
     getIntegerParam(ADMinY, &regionStartY);
-    getIntegerParam(ADSizeY, &regionStopY);
+    getIntegerParam(ADSizeY, &regionSizeY);
     getIntegerParam(ADBinX, &binX);
     getIntegerParam(ADBinY, &binY);
+
+    int regionStopX = regionStartX + regionSizeX;
+    int regionStopY = regionStartY + regionSizeY;
 
     // Update dimensions in context struct
     this->cameraContext->region.s1 = (uns16) regionStartX;
