@@ -546,13 +546,12 @@ ADKinetix::ADKinetix(int deviceIndex, const char *portName)
 
     // Get current SDK version
     uns16 sdkVersion;
-    int32 serialNumber;
     pl_pvcam_get_ver(&sdkVersion);
-    char sdkVersionStr[40], driverVersionStr[40], fwVersionStr[40], modelStr[40], vendorStr[40],
-        serialNumberStr[40];
+    char sdkVersionStr[40], driverVersionStr[40], fwVersionStr[40], modelStr[40], vendorStr[40];
     snprintf(sdkVersionStr, 40, "%d.%d.%d", (sdkVersion >> 8 & 0xFF), (sdkVersion >> 4 & 0xF),
              (sdkVersion >> 0 & 0xF));
     setStringParam(ADSDKVersion, sdkVersionStr);
+    printf("Using PVCam SDK version %s\n", sdkVersionStr);
 
     // Track current version of the driver
     snprintf(driverVersionStr, 40, "%d.%d.%d", ADKINETIX_VERSION, ADKINETIX_REVISION,
@@ -591,10 +590,10 @@ ADKinetix::ADKinetix(int deviceIndex, const char *portName)
                          (fwVersion >> 0) & 0xFF);
                 setStringParam(ADFirmwareVersion, fwVersionStr);
 
-                pl_get_param(this->cameraContext->hcam, PARAM_CAMERA_PART_NUMBER, ATTR_CURRENT,
-                             (void *) &serialNumber);
-                snprintf(serialNumberStr, 40, "%d", serialNumber);
-                setStringParam(ADSerialNumber, serialNumberStr);
+                char serialNumber[MAX_ALPHA_SER_NUM_LEN];
+                pl_get_param(this->cameraContext->hcam, PARAM_HEAD_SER_NUM_ALPHA, ATTR_CURRENT,
+                             serialNumber);
+                setStringParam(ADSerialNumber, serialNumber);
 
                 pl_get_param(this->cameraContext->hcam, PARAM_VENDOR_NAME, ATTR_CURRENT,
                              (void *) vendorStr);
