@@ -10,3 +10,5 @@ dllPath.bat
 *.sav*
 include/
 *.local
+*.swp
+venv/
