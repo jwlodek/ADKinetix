@@ -186,6 +186,7 @@ record(ai, "$(P)$(R)WaitForFrameTO_RBV") {
 record(ai, "$(P)$(R)Temperature_RBV") {
     field(DTYP, "asynFloat64")
     field(INP,  "@asyn($(PORT),$(ADDR),$(TIMEOUT))KTX_TEMP")
+    field(PREC, "3")
     field(SCAN, "I/O Intr")
 }
 

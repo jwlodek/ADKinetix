@@ -1099,8 +1099,10 @@ asynStatus ADKinetix::readEnum(asynUser* pasynUser, char* strings[], int values[
         return asynSuccess;
     }
     if(readEnumeration(this->cameraContext->hcam, &table, paramId, paramName)){
+        printf("Read enumeration for %s\n", paramName);
         *nIn = table.size();
         for(size_t i = 0; i < *nIn; i++){
+            printf("Found %s\n", table[i].name.c_str());
             strings[i] = epicsStrDup(table[i].name.c_str());
             values[i] = table[i].value;
             severities[i] = 0;
