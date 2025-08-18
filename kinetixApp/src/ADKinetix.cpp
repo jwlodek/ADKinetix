@@ -1082,6 +1082,33 @@ asynStatus ADKinetix::setMinExpRes(KTX_MIN_EXP_RES currentExpRes, KTX_MIN_EXP_RE
     return status;
 }
 
+asynStatus ADKinetix::readEnum(asynUser* pasynUser, char* strings[], int values[], int severities[], 
+    size_t nElements, size_t* nIn){
+
+    int function = pasynUser->reason;
+    const char* functionName = "readEnum";
+
+    NVPC table;
+    uns32 paramId;
+    const char* paramName = NULL;
+
+    if(function == KTX_FanSpeed){
+        paramId = PARAM_FAN_SPEED_SETPOINT;
+        paramName = "PARAM_FAN_SPEED_SETPOINT";
+    } else {
+        return asynSuccess;
+    }
+    if(readEnumeration(this->cameraContext->hcam, &table, paramId, paramName)){
+        *nIn = table.size();
+        for(size_t i = 0; i < *nIn; i++){
+            strings[i] = table[i].name.c_str();
+            values[i] = table[i].value;
+            severities[i] = 0;
+        }
+        return asynSuccess;
+    }
+}
+
 /**
  * @brief Override of ADDriver function - performs callbacks on write events to int PVs
  *
