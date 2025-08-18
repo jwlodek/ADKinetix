@@ -1101,12 +1101,13 @@ asynStatus ADKinetix::readEnum(asynUser* pasynUser, char* strings[], int values[
     if(readEnumeration(this->cameraContext->hcam, &table, paramId, paramName)){
         *nIn = table.size();
         for(size_t i = 0; i < *nIn; i++){
-            strings[i] = table[i].name.c_str();
+            strings[i] = epicsStrDup(table[i].name.c_str());
             values[i] = table[i].value;
             severities[i] = 0;
         }
         return asynSuccess;
     }
+    return asynError;
 }
 
 /**
