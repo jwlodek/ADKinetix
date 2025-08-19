@@ -395,7 +395,7 @@ record(mbbi, "$(P)$(R)SelectedInterface_RBV") {
 record(mbbo, "$(P)$(R)FanSpeed"){
     field(DESC, "Fan speed controls")
     field(DTYP, "asynInt32")
-    field(OUT, "@asyn($(PORT),$(ADDR),$(TIMEOUT))KTX_FAN_SPEED)")
+    field(OUT, "@asyn($(PORT),$(ADDR),$(TIMEOUT))KTX_FAN_SPEED")
     # field(ZRST, "High")
     # field(ZRVL, "0")
     # field(ONST, "Medium")
@@ -408,9 +408,9 @@ record(mbbo, "$(P)$(R)FanSpeed"){
 }
 
 record(mbbi, "$(P)$(R)FanSpeed_RBV"){
-field(DESC, "Fan speed controls")
+    field(DESC, "Fan speed controls")
     field(DTYP, "asynInt32")
-    field(INP, "@asyn($(PORT),$(ADDR),$(TIMEOUT))KTX_FAN_SPEED)")
+    field(INP, "@asyn($(PORT),$(ADDR),$(TIMEOUT))KTX_FAN_SPEED")
     # field(ZRST, "High")
     # field(ZRVL, "0")
     # field(ONST, "Medium")
