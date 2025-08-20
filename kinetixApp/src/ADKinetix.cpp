@@ -849,7 +849,7 @@ void ADKinetix::acquisitionThread() {
     size_t dims[2];
     NDColorMode_t colorMode = NDColorModeMono;  // only grayscale at the moment
     NDDataType_t dataType;
-    getIntegerParam(ADDataType, (int*) &dataType);
+    getIntegerParam(NDDataType, (int*) &dataType);
 
     getCurrentFrameDimensions(dims);
 
