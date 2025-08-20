@@ -268,6 +268,10 @@ void ADKinetix::selectSpeedTableMode() {
     } else
         this->cameraContext->imageFormat = PL_IMAGE_FORMAT_MONO8;
 
+    NDDataType_t dataType =
+        this->cameraContext->imageFormat == PL_IMAGE_FORMAT_MONO8 ? NDUInt8 : NDUInt16;
+    setIntegerParam(NDDataType, dataType);
+
     this->speedTableModeSelected = true;
     callParamCallbacks();
 }
@@ -770,26 +774,6 @@ void ADKinetix::acquireStop() {
 }
 
 /**
- * @brief Gets current NDDataType given readout mode
- *
- * @return NDDataType_t matching current frame readout mode
- */
-NDDataType_t ADKinetix::getCurrentNDBitDepth() {
-    int readoutPortIdx, speedIdx, gainIdx;
-    getIntegerParam(KTX_ReadoutPortIdx, &readoutPortIdx);
-    getIntegerParam(KTX_SpeedIdx, &speedIdx);
-    getIntegerParam(KTX_GainIdx, &gainIdx);
-    SpdtabGain currentGainMode =
-        this->cameraContext->speedTable[readoutPortIdx].speeds[speedIdx].gains[gainIdx];
-
-    NDDataType_t dataType = NDUInt8;
-    if (currentGainMode.bitDepth != 8) {
-        dataType = NDUInt16;
-    }
-    return dataType;
-}
-
-/**
  * @brief Updates descriptions of selected readout mode without applying it.
  */
 void ADKinetix::updateReadoutPortDesc() {
@@ -840,8 +824,6 @@ void ADKinetix::updateReadoutPortDesc() {
     }
 
     if (valid == 1) {
-        NDDataType_t dataType = getCurrentNDBitDepth();
-        setIntegerParam(NDDataType, dataType);
         setIntegerParam(KTX_ModeValid, 1);
     } else {
         WARN("Selected readout mode is not supported!");
@@ -867,7 +849,9 @@ void ADKinetix::acquisitionThread() {
     uns32 frameBufferSize;
     size_t dims[2];
     NDColorMode_t colorMode = NDColorModeMono;  // only grayscale at the moment
-    NDDataType_t dataType = getCurrentNDBitDepth();
+    NDDataType_t dataType;
+    getIntegerParam(NDDataType, (int *) &dataType);
+
     getCurrentFrameDimensions(dims);
 
     if (!this->speedTableModeSelected) {
