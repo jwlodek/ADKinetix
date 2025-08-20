@@ -1,1 +1,8 @@
 file "ADBase_settings.req", P=$(P), R=$(R)
+$(P)$(R)ReadoutPortIdx
+$(P)$(R)SpeedIdx
+$(P)$(R)GainIdx
+$(P)$(R)MinExpRes
+$(P)$(R)StopAcqOnTimeout
+$(P)$(R)WaitForFrameTO
+$(P)$(R)FanSpeed
