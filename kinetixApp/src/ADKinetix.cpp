@@ -518,7 +518,8 @@ void ADKinetix::getCurrentFrameDimensions(size_t *dims) {
  * @param portName Unique asyn port name
  */
 ADKinetix::ADKinetix(int deviceIndex, const char *portName)
-    : ADDriver(portName, 1, NUM_KTX_PARAMS, 0, 0, 0, 0, 0, 1, 0, 0) {
+    : ADDriver(portName, 1, NUM_KTX_PARAMS, 0, 0, asynEnumMask, asynEnumMask, ASYN_CANBLOCK, 1, 0,
+               0) {
     const char *functionName = "ADKinetix";
 
     // Initialize new parameters in parameter library
@@ -551,7 +552,6 @@ ADKinetix::ADKinetix(int deviceIndex, const char *portName)
     snprintf(sdkVersionStr, 40, "%d.%d.%d", (sdkVersion >> 8 & 0xFF), (sdkVersion >> 4 & 0xF),
              (sdkVersion >> 0 & 0xF));
     setStringParam(ADSDKVersion, sdkVersionStr);
-    printf("Using PVCam SDK version %s\n", sdkVersionStr);
 
     // Track current version of the driver
     snprintf(driverVersionStr, 40, "%d.%d.%d", ADKINETIX_VERSION, ADKINETIX_REVISION,
@@ -696,7 +696,6 @@ ADKinetix::ADKinetix(int deviceIndex, const char *portName)
             }
         }
     }
-
     epicsAtExit(exitCallbackC, (void *) this);
 }
 
@@ -1082,6 +1081,36 @@ asynStatus ADKinetix::setMinExpRes(KTX_MIN_EXP_RES currentExpRes, KTX_MIN_EXP_RE
     return status;
 }
 
+asynStatus ADKinetix::readEnum(asynUser *pasynUser, char *strings[], int values[], int severities[],
+                               size_t nElements, size_t *nIn) {
+    int function = pasynUser->reason;
+    const char *functionName = "readEnum";
+
+    NVPC table;
+    uns32 paramId;
+    const char *paramName = NULL;
+
+    *nIn = 0;
+
+    if (function == KTX_FanSpeed) {
+        paramId = PARAM_FAN_SPEED_SETPOINT;
+        paramName = "PARAM_FAN_SPEED_SETPOINT";
+        INFO("Reading possible fan speed states...");
+    }
+    if (paramName != NULL &&
+        readEnumeration(this->cameraContext->hcam, &table, paramId, paramName)) {
+        *nIn = table.size();
+        for (size_t i = 0; i < *nIn; i++) {
+            INFO_ARGS("Found possible state: %s", table[i].name.c_str());
+            strings[i] = epicsStrDup(table[i].name.c_str());
+            values[i] = table[i].value;
+            severities[i] = 0;
+        }
+        return asynSuccess;
+    }
+    return asynError;
+}
+
 /**
  * @brief Override of ADDriver function - performs callbacks on write events to int PVs
  *
@@ -1132,6 +1161,18 @@ asynStatus ADKinetix::writeInt32(asynUser *pasynUser, epicsInt32 value) {
         }
     } else if (function == KTX_MinExpRes) {
         status = setMinExpRes((KTX_MIN_EXP_RES) currentExpRes, (KTX_MIN_EXP_RES) value);
+    } else if (function == KTX_FanSpeed) {
+        if (acquiring == 0) {
+            if (PV_OK != pl_set_param(this->cameraContext->hcam, PARAM_FAN_SPEED_SETPOINT,
+                                      (void *) &value)) {
+                reportKinetixError(functionName);
+                status = asynError;
+            } else {
+                setStringParam(ADStatusMessage, "Updated fan speed");
+            }
+        } else {
+            ERR("Changing fan speed while acquiring is not permitted!");
+        }
     } else if (function == ADBinX || function == ADBinY || function == ADMinX ||
                function == ADMinY || function == ADSizeX || function == ADSizeY) {
         // If we change binning or image dims, update the internal region state
