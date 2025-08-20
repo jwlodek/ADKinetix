@@ -16,7 +16,7 @@
 
 // Driver version numbers
 #define ADKINETIX_VERSION 1
-#define ADKINETIX_REVISION 1
+#define ADKINETIX_REVISION 2
 #define ADKINETIX_MODIFICATION 0
 
 // Standard Includes
@@ -116,6 +116,8 @@ class ADKinetix : public ADDriver {
     ADKinetix(int deviceIndex, const char* portName);
 
     /* These are the methods that we override from ADDriver */
+    virtual asynStatus readEnum(asynUser* pasynUser, char* strings[], int values[],
+                                int severities[], size_t nElements, size_t* nIn);
     virtual asynStatus writeInt32(asynUser* pasynUser, epicsInt32 value);
     virtual asynStatus writeFloat64(asynUser* pasynUser, epicsFloat64 value);
     void report(FILE* fp, int details);
