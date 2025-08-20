@@ -9,7 +9,7 @@ include "ADBase.template"
 
 # Only unsigned 8 or 16 bit integers are supported.  Determined by PixelEncoding
 record(mbbo, "$(P)$(R)DataType") {
-   field(DISA, "1") 
+   field(DISA, "1")
 }
 
 record(mbbi, "$(P)$(R)DataType_RBV") {

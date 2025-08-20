@@ -268,7 +268,8 @@ void ADKinetix::selectSpeedTableMode() {
     } else
         this->cameraContext->imageFormat = PL_IMAGE_FORMAT_MONO8;
 
-    NDDataType_t dataType = this->cameraContext->imageFormat == PL_IMAGE_FORMAT_MONO8 ? NDUInt8 : NDUInt16; 
+    NDDataType_t dataType =
+        this->cameraContext->imageFormat == PL_IMAGE_FORMAT_MONO8 ? NDUInt8 : NDUInt16;
     setIntegerParam(NDDataType, dataType);
 
     this->speedTableModeSelected = true;
@@ -849,7 +850,7 @@ void ADKinetix::acquisitionThread() {
     size_t dims[2];
     NDColorMode_t colorMode = NDColorModeMono;  // only grayscale at the moment
     NDDataType_t dataType;
-    getIntegerParam(NDDataType, (int*) &dataType);
+    getIntegerParam(NDDataType, (int *) &dataType);
 
     getCurrentFrameDimensions(dims);
 
