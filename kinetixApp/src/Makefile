@@ -5,19 +5,19 @@ include $(TOP)/configure/CONFIG
 #=============================
 LIBRARY_NAME = ADKinetix
 
-USR_CFLAGS_WIN32 +=   -DWIN32
-USR_CXXFLAGS_WIN32 += -DWIN32
+USR_CPPFLAGS_Linux += -std=c++11 -I$(PVCAM_INCLUDE)
+USR_LDFLAGS_Linux += -L$(PVCAM_LIB)
 
-LIBRARY_IOC_WIN32 = $(LIBRARY_NAME)
-LIBRARY_IOC_Linux = $(LIBRARY_NAME)
+USR_CPPFLAGS_WIN32 += /I$(PVCAM_INCLUDE)
+USR_LDFLAGS_WIN32 += /LIBPATH$(PVCAM_LIB)
+
+LIBRARY_IOC = $(LIBRARY_NAME)
 
 #Include driver code
 LIB_SRCS += ADKinetix.cpp
 
-#Add required libraries
-
 LIB_LIBS_WIN32 += pvcam64
-LIB_LIBS_LINUX += pvcam
+LIB_SYS_LIBS_LINUX += pvcam
 
 DBD += kinetixSupport.dbd
 
