@@ -20,3 +20,19 @@ realuninstall: realuninstall_iocs
 realuninstall_iocs:
 	$(MAKE) -C iocs realuninstall
 .PHONY: realuninstall realuninstall_iocs
+
+bobfiles:
+	pixi run make-bobfiles
+
+# Generate parameter definitions and then immediately format with clang-format
+paramdefs:
+	pixi run make-paramdefs
+	pixi run clang-format -i -style=file $(shell find kinetixApp -name '*.h' -o -name '*.cpp')
+
+lint:
+	pixi run lint
+
+coverage-report:
+	pixi run tests
+	pixi run get-coverage-info
+	pixi run make-coverage-report

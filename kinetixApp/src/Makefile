@@ -12,7 +12,7 @@ LIBRARY_IOC_WIN32 = $(LIBRARY_NAME)
 LIBRARY_IOC_Linux = $(LIBRARY_NAME)
 
 #Include driver code
-LIB_SRCS += ADKinetix.cpp
+LIB_SRCS += ADKinetix.cpp ADKinetixParamDefs.cpp
 
 #Add required libraries
 

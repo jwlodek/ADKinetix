@@ -15,43 +15,11 @@
 #include "master.h"
 #include "pvcam.h"
 
-// Error message formatters
-#define ERR(msg) \
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s::%s: %s\n", driverName, functionName, msg)
-
-#define ERR_ARGS(fmt, ...)                                                                    \
-    asynPrint(pasynUserSelf, ASYN_TRACE_ERROR, "%s::%s: " fmt "\n", driverName, functionName, \
-              __VA_ARGS__);
-
-// Warning message formatters
-#define WARN(msg) \
-    asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s::%s: %s\n", driverName, functionName, msg)
-
-#define WARN_ARGS(fmt, ...)                                                                     \
-    asynPrint(pasynUserSelf, ASYN_TRACE_WARNING, "%s::%s: " fmt "\n", driverName, functionName, \
-              __VA_ARGS__);
-
-// Info message formatters
-#define INFO(msg) \
-    asynPrint(pasynUserSelf, ASYN_TRACEIO_DEVICE, "%s::%s: %s\n", driverName, functionName, msg)
-
-#define INFO_ARGS(fmt, ...)                                                                      \
-    asynPrint(pasynUserSelf, ASYN_TRACEIO_DEVICE, "%s::%s: " fmt "\n", driverName, functionName, \
-              __VA_ARGS__);
-
-// Debug message formatters
-#define DEBUG(msg) \
-    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s::%s: %s\n", driverName, functionName, msg)
-
-#define DEBUG_ARGS(fmt, ...)                                                                 \
-    asynPrint(pasynUserSelf, ASYN_TRACE_FLOW, "%s::%s: " fmt "\n", driverName, functionName, \
-              __VA_ARGS__);
-
 /**
  * @brief Function that instatiates a driver object. Called from IOC shell
  *
  */
-extern "C" int ADKinetixConfig(int deviceIndex, const char *portName) {
+extern "C" int ADKinetixConfig(int deviceIndex, const char* portName) {
     new ADKinetix(deviceIndex, portName);
     return (asynSuccess);
 }
@@ -61,8 +29,8 @@ extern "C" int ADKinetixConfig(int deviceIndex, const char *portName) {
  *
  * @param drvPvt Pointer to instance of ADKinetix driver object
  */
-static void monitorThreadC(void *drvPvt) {
-    ADKinetix *pPvt = (ADKinetix *) drvPvt;
+static void monitorThreadC(void* drvPvt) {
+    ADKinetix* pPvt = (ADKinetix*) drvPvt;
     pPvt->monitorThread();
 }
 
@@ -71,8 +39,8 @@ static void monitorThreadC(void *drvPvt) {
  *
  * @param drvPvt Pointer to instance of ADKinetix driver object
  */
-static void acquisitionThreadC(void *drvPvt) {
-    ADKinetix *pPvt = (ADKinetix *) drvPvt;
+static void acquisitionThreadC(void* drvPvt) {
+    ADKinetix* pPvt = (ADKinetix*) drvPvt;
     pPvt->acquisitionThread();
 }
 
@@ -81,8 +49,8 @@ static void acquisitionThreadC(void *drvPvt) {
  *
  * @param drvPvt Pointer to instance of ADKinetix driver object
  */
-static void exitCallbackC(void *drvPvt) {
-    ADKinetix *pPvt = (ADKinetix *) drvPvt;
+static void exitCallbackC(void* drvPvt) {
+    ADKinetix* pPvt = (ADKinetix*) drvPvt;
     delete pPvt;
 }
 
@@ -94,10 +62,8 @@ static void exitCallbackC(void *drvPvt) {
  * @return false if acquisition was aborted or timed out
  */
 bool ADKinetix::waitForEofEvent(uns32 timeoutMs) {
-    const char *functionName = "waitForEofEvent";
-
     std::unique_lock<std::mutex> lock(this->cameraContext->eofEvent.mutex);
-    CameraContext *ctx =
+    CameraContext* ctx =
         this->cameraContext;  // For lambda we need temporary local reference to ctx pointer
     this->cameraContext->eofEvent.cond.wait_for(
         lock, std::chrono::milliseconds(timeoutMs),
@@ -125,18 +91,18 @@ bool ADKinetix::waitForEofEvent(uns32 timeoutMs) {
  * @param paramName parameter name
  * @return true if parameter is supported, false otherwise
  */
-bool ADKinetix::isParamAvailable(int16 hcam, uns32 paramID, const char *paramName) {
+bool ADKinetix::isParamAvailable(int16 hcam, uns32 paramID, const char* paramName) {
     if (!paramName) {
         return false;
     }
 
     rs_bool isAvailable;
-    if (PV_OK != pl_get_param(hcam, paramID, ATTR_AVAIL, (void *) &isAvailable)) {
-        printf("Error reading ATTR_AVAIL of %s\n", paramName);
+    if (PV_OK != pl_get_param(hcam, paramID, ATTR_AVAIL, (void*) &isAvailable)) {
+        ERR_ARGS("Error reading ATTR_AVAIL of %s", paramName);
         return false;
     }
     if (isAvailable == FALSE) {
-        printf("Parameter %s is not available\n", paramName);
+        WARN_ARGS("Parameter %s is not available", paramName);
         return false;
     }
 
@@ -152,16 +118,15 @@ bool ADKinetix::isParamAvailable(int16 hcam, uns32 paramID, const char *paramNam
  * @param paramName parameterName
  * @return true if the enum table is not empty, false otherwise
  */
-bool ADKinetix::readEnumeration(int16 hcam, NVPC *pNvpc, uns32 paramID, const char *paramName) {
-    const char *functionName = "readEnumeration";
+bool ADKinetix::readEnumeration(int16 hcam, NVPC* pNvpc, uns32 paramID, const char* paramName) {
     if (!pNvpc || !paramName) return false;
 
     if (!isParamAvailable(hcam, paramID, paramName)) return false;
 
     uns32 count;
-    if (PV_OK != pl_get_param(hcam, paramID, ATTR_COUNT, (void *) &count)) {
+    if (PV_OK != pl_get_param(hcam, paramID, ATTR_COUNT, (void*) &count)) {
         const std::string msg = "pl_get_param(" + std::string(paramName) + ")";
-        reportKinetixError(functionName);
+        reportKinetixError(__func__);
         return false;
     }
 
@@ -171,12 +136,12 @@ bool ADKinetix::readEnumeration(int16 hcam, NVPC *pNvpc, uns32 paramID, const ch
         uns32 strLength;
         if (PV_OK != pl_enum_str_length(hcam, paramID, i, &strLength)) {
             const std::string msg = "pl_enum_str_length(" + std::string(paramName) + ")";
-            reportKinetixError(functionName);
+            reportKinetixError(__func__);
             return false;
         }
 
         // Allocate the destination string
-        char *name = new (std::nothrow) char[strLength];
+        char* name = new (std::nothrow) char[strLength];
         if (!name) {
             ERR_ARGS("Unable to allocate memory for %s enum item name\n", paramName);
             return false;
@@ -186,7 +151,7 @@ bool ADKinetix::readEnumeration(int16 hcam, NVPC *pNvpc, uns32 paramID, const ch
         int32 value;
         if (PV_OK != pl_get_enum_param(hcam, paramID, i, &value, name, strLength)) {
             const std::string msg = "pl_get_enum_param(" + std::string(paramName) + ")";
-            reportKinetixError(functionName);
+            reportKinetixError(__func__);
             delete[] name;
             return false;
         }
@@ -207,8 +172,6 @@ bool ADKinetix::readEnumeration(int16 hcam, NVPC *pNvpc, uns32 paramID, const ch
  * @brief Function that switches speed table mode based on PV selection.
  */
 void ADKinetix::selectSpeedTableMode() {
-    const char *functionName = "selectSpeedTableMode";
-
     // Get current speed table selection
     int readoutPortIdx, speedIdx, gainIdx;
     getIntegerParam(KTX_ReadoutPortIdx, &readoutPortIdx);
@@ -220,8 +183,8 @@ void ADKinetix::selectSpeedTableMode() {
 
     // Configure speed table mode
     if (PV_OK != pl_set_param(this->cameraContext->hcam, PARAM_READOUT_PORT,
-                              (void *) &this->cameraContext->speedTable[readoutPortIdx].value)) {
-        reportKinetixError(functionName);
+                              (void*) &this->cameraContext->speedTable[readoutPortIdx].value)) {
+        reportKinetixError(__func__);
         this->speedTableModeSelected = false;
         return;
     }
@@ -231,8 +194,8 @@ void ADKinetix::selectSpeedTableMode() {
     if (PV_OK !=
         pl_set_param(
             this->cameraContext->hcam, PARAM_SPDTAB_INDEX,
-            (void *) &this->cameraContext->speedTable[readoutPortIdx].speeds[speedIdx].index)) {
-        reportKinetixError(functionName);
+            (void*) &this->cameraContext->speedTable[readoutPortIdx].speeds[speedIdx].index)) {
+        reportKinetixError(__func__);
         this->speedTableModeSelected = false;
         return;
     }
@@ -240,11 +203,11 @@ void ADKinetix::selectSpeedTableMode() {
               this->cameraContext->speedTable[readoutPortIdx].speeds[speedIdx].pixTimeNs);
 
     if (PV_OK != pl_set_param(this->cameraContext->hcam, PARAM_GAIN_INDEX,
-                              (void *) &this->cameraContext->speedTable[readoutPortIdx]
+                              (void*) &this->cameraContext->speedTable[readoutPortIdx]
                                   .speeds[speedIdx]
                                   .gains[gainIdx]
                                   .index)) {
-        reportKinetixError(functionName);
+        reportKinetixError(__func__);
         this->speedTableModeSelected = false;
         return;
     }
@@ -280,19 +243,18 @@ void ADKinetix::selectSpeedTableMode() {
  * @brief Utility function for printing speed table
  */
 void ADKinetix::printSpeedTable() {
-    const char *functionName = "printSpeedTable";
     if (this->cameraContext->speedTable.empty()) {
         ERR("No speed table read from detector!");
         return;
     }
     // Speed table has been created, print it out
     printf("  Speed table:\n");
-    for (const auto &port : this->cameraContext->speedTable) {
+    for (const auto& port : this->cameraContext->speedTable) {
         printf("  - port '%s', value %d\n", port.name.c_str(), port.value);
-        for (const auto &speed : port.speeds) {
+        for (const auto& speed : port.speeds) {
             printf("    - speed index %d, running at %f MHz\n", speed.index,
                    1000.0 / (float) speed.pixTimeNs);
-            for (const auto &gain : speed.gains) {
+            for (const auto& gain : speed.gains) {
                 printf("      - gain index %d, %sbit-depth %d bpp\n", gain.index,
                        (gain.name.empty()) ? "" : ("'" + gain.name + "', ").c_str(), gain.bitDepth);
             }
@@ -307,7 +269,6 @@ void ADKinetix::printSpeedTable() {
  * @return true if table read correctly, false otherwise
  */
 bool ADKinetix::getSpeedTable() {
-    const char *functionName = "getSpeedTable";
     std::vector<SpdtabPort> table;
 
     NVPC ports;
@@ -326,7 +287,7 @@ bool ADKinetix::getSpeedTable() {
 
     rs_bool isGainNameAvailable;
     if (PV_OK != pl_get_param(this->cameraContext->hcam, PARAM_GAIN_NAME, ATTR_AVAIL,
-                              (void *) &isGainNameAvailable)) {
+                              (void*) &isGainNameAvailable)) {
         ERR("Error reading ATTR_AVAIL of PARAM_GAIN_NAME\n");
         return false;
     }
@@ -335,17 +296,17 @@ bool ADKinetix::getSpeedTable() {
     // Iterate through available ports and their speeds
     for (size_t pi = 0; pi < ports.size(); pi++) {
         // Set readout port
-        if (PV_OK != pl_set_param(this->cameraContext->hcam, PARAM_READOUT_PORT,
-                                  (void *) &ports[pi].value)) {
-            reportKinetixError(functionName);
+        if (PV_OK !=
+            pl_set_param(this->cameraContext->hcam, PARAM_READOUT_PORT, (void*) &ports[pi].value)) {
+            reportKinetixError(__func__);
             return false;
         }
 
         // Get number of available speeds for this port
         uns32 speedCount;
         if (PV_OK != pl_get_param(this->cameraContext->hcam, PARAM_SPDTAB_INDEX, ATTR_COUNT,
-                                  (void *) &speedCount)) {
-            reportKinetixError(functionName);
+                                  (void*) &speedCount)) {
+            reportKinetixError(__func__);
             return false;
         }
 
@@ -356,9 +317,8 @@ bool ADKinetix::getSpeedTable() {
         // Iterate through all the speeds
         for (int16 si = 0; si < (int16) speedCount; si++) {
             // Set camera to new speed index
-            if (PV_OK !=
-                pl_set_param(this->cameraContext->hcam, PARAM_SPDTAB_INDEX, (void *) &si)) {
-                reportKinetixError(functionName);
+            if (PV_OK != pl_set_param(this->cameraContext->hcam, PARAM_SPDTAB_INDEX, (void*) &si)) {
+                reportKinetixError(__func__);
                 return false;
             }
 
@@ -367,15 +327,15 @@ bool ADKinetix::getSpeedTable() {
             // frequency of the port/speed pair.
             uns16 pixTime;
             if (PV_OK != pl_get_param(this->cameraContext->hcam, PARAM_PIX_TIME, ATTR_CURRENT,
-                                      (void *) &pixTime)) {
-                reportKinetixError(functionName);
+                                      (void*) &pixTime)) {
+                reportKinetixError(__func__);
                 return false;
             }
 
             uns32 gainCount;
             if (PV_OK != pl_get_param(this->cameraContext->hcam, PARAM_GAIN_INDEX, ATTR_COUNT,
-                                      (void *) &gainCount)) {
-                reportKinetixError(functionName);
+                                      (void*) &gainCount)) {
+                reportKinetixError(__func__);
                 return false;
             }
 
@@ -387,16 +347,16 @@ bool ADKinetix::getSpeedTable() {
             for (int16 gi = 1; gi <= (int16) gainCount; gi++) {
                 // Set camera to new gain index
                 if (PV_OK !=
-                    pl_set_param(this->cameraContext->hcam, PARAM_GAIN_INDEX, (void *) &gi)) {
-                    reportKinetixError(functionName);
+                    pl_set_param(this->cameraContext->hcam, PARAM_GAIN_INDEX, (void*) &gi)) {
+                    reportKinetixError(__func__);
                     return false;
                 }
 
                 // Get bit depth for the current gain
                 int16 bitDepth;
                 if (PV_OK != pl_get_param(this->cameraContext->hcam, PARAM_BIT_DEPTH, ATTR_CURRENT,
-                                          (void *) &bitDepth)) {
-                    reportKinetixError(functionName);
+                                          (void*) &bitDepth)) {
+                    reportKinetixError(__func__);
                     return false;
                 }
 
@@ -407,8 +367,8 @@ bool ADKinetix::getSpeedTable() {
                 if (isGainNameSupported) {
                     char gainName[MAX_GAIN_NAME_LEN];
                     if (PV_OK != pl_get_param(this->cameraContext->hcam, PARAM_GAIN_NAME,
-                                              ATTR_CURRENT, (void *) gainName)) {
-                        reportKinetixError(functionName);
+                                              ATTR_CURRENT, (void*) gainName)) {
+                        reportKinetixError(__func__);
                         return false;
                     }
 
@@ -432,18 +392,17 @@ bool ADKinetix::getSpeedTable() {
  * @brief Updates image format based on selected speed table mode
  */
 void ADKinetix::updateImageFormat() {
-    const char *functionName = "updateImageFormat";
     this->cameraContext->imageFormat = PL_IMAGE_FORMAT_MONO16;
 
     rs_bool isAvailable;
     if (PV_OK != pl_get_param(this->cameraContext->hcam, PARAM_IMAGE_FORMAT, ATTR_AVAIL,
-                              (void *) &isAvailable))
+                              (void*) &isAvailable))
         return;
     if (isAvailable == FALSE) return;
 
     int32 imageFormat;
     if (PV_OK != pl_get_param(this->cameraContext->hcam, PARAM_IMAGE_FORMAT, ATTR_CURRENT,
-                              (void *) &imageFormat))
+                              (void*) &imageFormat))
         return;
 
     DEBUG_ARGS("Detected image format %d for selected mode", imageFormat);
@@ -453,7 +412,7 @@ void ADKinetix::updateImageFormat() {
 /**
  * @brief Callback function fired on each new frame event
  */
-static void PV_DECL newFrameCallback(FRAME_INFO *pFrameInfo, CameraContext *ctx) {
+static void PV_DECL newFrameCallback(FRAME_INFO* pFrameInfo, CameraContext* ctx) {
     if (ctx == nullptr) return;
 
     ctx->eofFrameInfo = *pFrameInfo;
@@ -474,8 +433,6 @@ static void PV_DECL newFrameCallback(FRAME_INFO *pFrameInfo, CameraContext *ctx)
  * @brief Updates the currently selected readout region for the camera
  */
 void ADKinetix::updateCameraRegion() {
-    const char *functionName = "updateCameraRegion";
-
     // Get region dimensions and binning from EPICS
     int regionStartX, regionStartY, regionSizeX, regionSizeY, binX, binY;
 
@@ -508,7 +465,7 @@ void ADKinetix::updateCameraRegion() {
  *
  * @param dims Pointer to array of size_t representing dimensions of each axis
  */
-void ADKinetix::getCurrentFrameDimensions(size_t *dims) {
+void ADKinetix::getCurrentFrameDimensions(size_t* dims) {
     dims[0] = (size_t) ((this->cameraContext->region.s2 - this->cameraContext->region.s1 + 1) /
                         this->cameraContext->region.sbin);
     dims[1] = (size_t) ((this->cameraContext->region.p2 - this->cameraContext->region.p1 + 1) /
@@ -521,31 +478,15 @@ void ADKinetix::getCurrentFrameDimensions(size_t *dims) {
  * @param deviceIndex Device index as seen by PVCam
  * @param portName Unique asyn port name
  */
-ADKinetix::ADKinetix(int deviceIndex, const char *portName)
+ADKinetix::ADKinetix(int deviceIndex, const char* portName)
     : ADDriver(portName, 1, NUM_KTX_PARAMS, 0, 0, asynEnumMask, asynEnumMask, ASYN_CANBLOCK, 1, 0,
                0) {
-    const char *functionName = "ADKinetix";
-
     // Initialize new parameters in parameter library
-    createParam(KTX_TemperatureString, asynParamFloat64, &KTX_Temperature);
-    createParam(KTX_FanSpeedString, asynParamInt32, &KTX_FanSpeed);
-    createParam(KTX_CommInterfaceString, asynParamInt32, &KTX_CommInterface);
-    createParam(KTX_StopAcqOnTimeoutString, asynParamInt32, &KTX_StopAcqOnTimeout);
-    createParam(KTX_WaitForFrameTimeoutString, asynParamInt32, &KTX_WaitForFrameTimeout);
-    createParam(KTX_MinExpResString, asynParamInt32, &KTX_MinExpRes);
-    createParam(KTX_ReadoutModeString, asynParamOctet, &KTX_ReadoutMode);
-    createParam(KTX_ApplyReadoutModeString, asynParamInt32, &KTX_ApplyReadoutMode);
-    createParam(KTX_ModeValidString, asynParamInt32, &KTX_ModeValid);
-    createParam(KTX_ReadoutPortDescString, asynParamOctet, &KTX_ReadoutPortDesc);
-    createParam(KTX_ReadoutPortIdxString, asynParamInt32, &KTX_ReadoutPortIdx);
-    createParam(KTX_SpeedDescString, asynParamOctet, &KTX_SpeedDesc);
-    createParam(KTX_SpeedIdxString, asynParamInt32, &KTX_SpeedIdx);
-    createParam(KTX_GainIdxString, asynParamInt32, &KTX_GainIdx);
-    createParam(KTX_GainDescString, asynParamOctet, &KTX_GainDesc);
+    createAllParams();
 
     // Initialize the PVCam SDK
     if (!pl_pvcam_init()) {
-        reportKinetixError(functionName);
+        reportKinetixError(__func__);
         exit(1);
     }
 
@@ -565,7 +506,7 @@ ADKinetix::ADKinetix(int deviceIndex, const char *portName)
     // Identify number of connected cameras
     int16 numCameras = 0;
     if (!pl_cam_get_total(&numCameras)) {
-        reportKinetixError(functionName);
+        reportKinetixError(__func__);
     } else if (numCameras <= 0) {
         ERR("No cameras detected!");
     } else if (numCameras < deviceIndex) {
@@ -589,7 +530,7 @@ ADKinetix::ADKinetix(int deviceIndex, const char *portName)
                 // Camera is opened, collect model number, serial, and firmware information
                 uns16 fwVersion;
                 pl_get_param(this->cameraContext->hcam, PARAM_CAM_FW_VERSION, ATTR_CURRENT,
-                             (void *) &fwVersion);
+                             (void*) &fwVersion);
                 snprintf(fwVersionStr, 40, "%d.%d", (fwVersion >> 8) & 0xFF,
                          (fwVersion >> 0) & 0xFF);
                 setStringParam(ADFirmwareVersion, fwVersionStr);
@@ -600,11 +541,11 @@ ADKinetix::ADKinetix(int deviceIndex, const char *portName)
                 setStringParam(ADSerialNumber, serialNumber);
 
                 pl_get_param(this->cameraContext->hcam, PARAM_VENDOR_NAME, ATTR_CURRENT,
-                             (void *) vendorStr);
+                             (void*) vendorStr);
                 setStringParam(ADManufacturer, vendorStr);
 
                 pl_get_param(this->cameraContext->hcam, PARAM_PRODUCT_NAME, ATTR_CURRENT,
-                             (void *) modelStr);
+                             (void*) modelStr);
                 setStringParam(ADModel, modelStr);
 
                 // Attempt to switch to microsecond min exposure resolution
@@ -615,36 +556,48 @@ ADKinetix::ADKinetix(int deviceIndex, const char *portName)
 
                 int32 interfaceId;
                 pl_get_param(this->cameraContext->hcam, PARAM_CAM_INTERFACE_TYPE, ATTR_CURRENT,
-                             (void *) &interfaceId);
+                             (void*) &interfaceId);
 
-                if (interfaceId == PL_CAM_IFC_TYPE_ETHERNET)
-                    interface = KTX_INTF_ETHERNET;
-                else if (interfaceId == PL_CAM_IFC_TYPE_VIRTUAL)
-                    interface = KTX_INTF_VIRTUAL;
-                else if (interfaceId == PL_CAM_IFC_TYPE_USB_1_1)
-                    interface = KTX_INTF_USB_1_1;
-                else if (interfaceId == PL_CAM_IFC_TYPE_USB_2_0)
-                    interface = KTX_INTF_USB_2_0;
-                else if (interfaceId == PL_CAM_IFC_TYPE_USB_3_0)
-                    interface = KTX_INTF_USB_3_0;
-                else if (interfaceId == PL_CAM_IFC_TYPE_USB_3_1)
-                    interface = KTX_INTF_USB_3_1;
-                else if (interfaceId == PL_CAM_IFC_TYPE_PCIE_X1)
-                    interface = KTX_INTF_PCIE_x1;
-                else if (interfaceId == PL_CAM_IFC_TYPE_PCIE_X4)
-                    interface = KTX_INTF_PCIE_x4;
-                else if (interfaceId == PL_CAM_IFC_TYPE_PCIE_X8)
-                    interface = KTX_INTF_PCIE_x8;
-                else if (interfaceId == PL_CAM_IFC_TYPE_PCIE)
-                    interface = KTX_INTF_PCIE;
+                switch(interfaceId) {
+                    case PL_CAM_IFC_TYPE_ETHERNET:
+                        interface = KTX_INTF_ETHERNET;
+                        break;
+                    case PL_CAM_IFC_TYPE_VIRTUAL:
+                        interface = KTX_INTF_VIRTUAL;
+                        break;
+                    case PL_CAM_IFC_TYPE_USB_1_1:
+                        interface = KTX_INTF_USB_1_1;
+                        break;
+                    case PL_CAM_IFC_TYPE_USB_2_0:
+                        interface = KTX_INTF_USB_2_0;
+                        break;
+                    case PL_CAM_IFC_TYPE_USB_3_0:
+                        interface = KTX_INTF_USB_3_0;
+                        break;
+                    case PL_CAM_IFC_TYPE_USB_3_1:
+                        interface = KTX_INTF_USB_3_1;
+                        break;
+                    case PL_CAM_IFC_TYPE_PCIE_X1:
+                        interface = KTX_INTF_PCIE_x1;
+                        break;
+                    case PL_CAM_IFC_TYPE_PCIE_X4:
+                        interface = KTX_INTF_PCIE_x4;
+                        break;
+                    case PL_CAM_IFC_TYPE_PCIE_X8:
+                        interface = KTX_INTF_PCIE_x8;
+                        break;
+                    case PL_CAM_IFC_TYPE_PCIE:
+                        interface = KTX_INTF_PCIE;
+                        break;
+                }
 
                 setIntegerParam(KTX_CommInterface, interface);
 
                 // Get information about connected camera resolution
                 pl_get_param(this->cameraContext->hcam, PARAM_SER_SIZE, ATTR_CURRENT,
-                             (void *) &this->cameraContext->sensorResX);
+                             (void*) &this->cameraContext->sensorResX);
                 pl_get_param(this->cameraContext->hcam, PARAM_PAR_SIZE, ATTR_CURRENT,
-                             (void *) &this->cameraContext->sensorResY);
+                             (void*) &this->cameraContext->sensorResY);
 
                 setIntegerParam(ADMaxSizeX, this->cameraContext->sensorResX);
                 setIntegerParam(ADMaxSizeY, this->cameraContext->sensorResY);
@@ -678,9 +631,9 @@ ADKinetix::ADKinetix(int deviceIndex, const char *portName)
                 callParamCallbacks();
 
                 // Register new frame callback function with PVCam SDK
-                if (PV_OK !=
-                    pl_cam_register_callback_ex3(this->cameraContext->hcam, PL_CALLBACK_EOF,
-                                                 (void *) newFrameCallback, this->cameraContext)) {
+                if (PV_OK != pl_cam_register_callback_ex3(this->cameraContext->hcam,
+                                                          PL_CALLBACK_EOF, (void*) newFrameCallback,
+                                                          this->cameraContext)) {
                     ERR("Failed to register callback function!");
                 } else {
                     INFO("Registered EOF callback function.");
@@ -700,15 +653,13 @@ ADKinetix::ADKinetix(int deviceIndex, const char *portName)
             }
         }
     }
-    epicsAtExit(exitCallbackC, (void *) this);
+    epicsAtExit(exitCallbackC, (void*) this);
 }
 
 /**
  * @brief Function that runs temperature monitoring thread
  */
 void ADKinetix::monitorThread() {
-    const char *functionName = "monitorThread";
-
     INFO("Temperature monitor thread active.");
 
     while (this->monitoringActive) {
@@ -717,8 +668,8 @@ void ADKinetix::monitorThread() {
             this->pollingTemperature = true;
             int16 temperature = 0;
             if (PV_OK != pl_get_param(this->cameraContext->hcam, PARAM_TEMP, ATTR_CURRENT,
-                                      (void *) &temperature)) {
-                reportKinetixError(functionName);
+                                      (void*) &temperature)) {
+                reportKinetixError(__func__);
             } else {
                 setDoubleParam(KTX_Temperature, (double) (temperature / 100.0));
                 callParamCallbacks();
@@ -734,8 +685,6 @@ void ADKinetix::monitorThread() {
  * @brief Starts acquisition by spawning main acq thread
  */
 void ADKinetix::acquireStart() {
-    const char *functionName = "acquireStart";
-
     // Spawn the acquisition thread. Make sure it's joinable.
     INFO("Spawning main acquisition thread...");
 
@@ -752,8 +701,6 @@ void ADKinetix::acquireStart() {
  * @brief stops acquisition by aborting exposure and joinging acq thread
  */
 void ADKinetix::acquireStop() {
-    const char *functionName = "acquireStop";
-
     if (this->acquisitionActive) {
         // Abort current acquisition
         pl_exp_abort(this->cameraContext->hcam, CCS_HALT);
@@ -777,8 +724,6 @@ void ADKinetix::acquireStop() {
  * @brief Updates descriptions of selected readout mode without applying it.
  */
 void ADKinetix::updateReadoutPortDesc() {
-    const char *functionName = "updateReadoutPortDesc";
-
     // Get readout port information
     int readoutPortIdx, speedIdx, gainIdx;
     getIntegerParam(KTX_ReadoutPortIdx, &readoutPortIdx);
@@ -835,14 +780,12 @@ void ADKinetix::updateReadoutPortDesc() {
 /**
  * @brief Main acquisition function for ADKinetix
  */
-void ADKinetix::acquisitionThread() {
-    const char *functionName = "acquisitionThread";
-    int acquisitionMode, targetNumImages, collectedImages, triggerMode, stopAcqOnTO, waitForFrameTO,
+void ADKinetix::acquisitionThread() {    int acquisitionMode, targetNumImages, collectedImages, triggerMode, stopAcqOnTO, waitForFrameTO,
         minExpRes;
     bool eofSuccess;
     double exposureTime;
     int16 pvcamExposureMode;
-    NDArray *pArray;
+    NDArray* pArray;
     NDArrayInfo arrayInfo;
 
     // Retrieve current frame information
@@ -850,7 +793,7 @@ void ADKinetix::acquisitionThread() {
     size_t dims[2];
     NDColorMode_t colorMode = NDColorModeMono;  // only grayscale at the moment
     NDDataType_t dataType;
-    getIntegerParam(NDDataType, (int *) &dataType);
+    getIntegerParam(NDDataType, (int*) &dataType);
 
     getCurrentFrameDimensions(dims);
 
@@ -885,8 +828,7 @@ void ADKinetix::acquisitionThread() {
     this->acquisitionActive = true;
 
     // Spin in place a bit to make sure the temp thread is not actively polling the camera
-    while (this->pollingTemperature)
-        ;
+    while (this->pollingTemperature);
 
     INFO("Acquisition thread active.");
 
@@ -901,11 +843,11 @@ void ADKinetix::acquisitionThread() {
                          &frameBufferSize);
 
         // Allocate frame buffer
-        this->frameBuffer = (uns8 *) calloc(1, (size_t) frameBufferSize);
+        this->frameBuffer = (uns8*) calloc(1, (size_t) frameBufferSize);
         INFO_ARGS("Allocated frame buffer of size %d...", frameBufferSize);
 
         if (PV_OK != pl_exp_start_seq(this->cameraContext->hcam, this->frameBuffer)) {
-            reportKinetixError(functionName);
+            reportKinetixError(__func__);
             this->acquisitionActive = false;
         }
     } else {
@@ -915,14 +857,14 @@ void ADKinetix::acquisitionThread() {
                           &frameBufferSize, circBuffMode);
 
         // Allocate entire circular buffer
-        this->frameBuffer = (uns8 *) calloc(
+        this->frameBuffer = (uns8*) calloc(
             KTX_CIRC_BUFF_SIZE, (size_t) frameBufferSize);  // Allocate memory for circular buffer
         INFO_ARGS("Allocated circular buffer for %d frames. Total size: %d bytes.",
                   KTX_CIRC_BUFF_SIZE, frameBufferSize * KTX_CIRC_BUFF_SIZE);
 
         if (PV_OK != pl_exp_start_cont(this->cameraContext->hcam, this->frameBuffer,
                                        KTX_CIRC_BUFF_SIZE * frameBufferSize)) {
-            reportKinetixError(functionName);
+            reportKinetixError(__func__);
             this->acquisitionActive = false;
         }
     }
@@ -1032,9 +974,7 @@ void ADKinetix::acquisitionThread() {
  * @param newExpRes Target new minimum exposure resolution
  * @return asynSuccess if min exposure res was accepted, asynError otherwise.
  */
-asynStatus ADKinetix::setMinExpRes(KTX_MIN_EXP_RES currentExpRes, KTX_MIN_EXP_RES newExpRes) {
-    const char *functionName = "setMinExpRes";
-    asynStatus status = asynSuccess;
+asynStatus ADKinetix::setMinExpRes(KTX_MIN_EXP_RES currentExpRes, KTX_MIN_EXP_RES newExpRes) {    asynStatus status = asynSuccess;
 
     // Convert EPICS min exp res to pvcam type
     int32 minExpRes;
@@ -1051,7 +991,7 @@ asynStatus ADKinetix::setMinExpRes(KTX_MIN_EXP_RES currentExpRes, KTX_MIN_EXP_RE
     }
 
     // Attempt to set requested minimum exposure resolution
-    if (PV_OK != pl_set_param(this->cameraContext->hcam, PARAM_EXP_RES, (void *) &minExpRes)) {
+    if (PV_OK != pl_set_param(this->cameraContext->hcam, PARAM_EXP_RES, (void*) &minExpRes)) {
         ERR_ARGS("Failed to configure minimum exposure resolution to %f second(s)!",
                  (double) (1 / pow(1000.0, (double) newExpRes)));
         setIntegerParam(KTX_MinExpRes, currentExpRes);
@@ -1065,14 +1005,12 @@ asynStatus ADKinetix::setMinExpRes(KTX_MIN_EXP_RES currentExpRes, KTX_MIN_EXP_RE
     return status;
 }
 
-asynStatus ADKinetix::readEnum(asynUser *pasynUser, char *strings[], int values[], int severities[],
-                               size_t nElements, size_t *nIn) {
+asynStatus ADKinetix::readEnum(asynUser* pasynUser, char* strings[], int values[], int severities[],
+                               size_t nElements, size_t* nIn) {
     int function = pasynUser->reason;
-    const char *functionName = "readEnum";
-
     NVPC table;
     uns32 paramId;
-    const char *paramName = NULL;
+    const char* paramName = NULL;
 
     *nIn = 0;
 
@@ -1102,9 +1040,7 @@ asynStatus ADKinetix::readEnum(asynUser *pasynUser, char *strings[], int values[
  * @param value Value written to PV
  * @returns asynSuccess if write was successful, asynError otherwise
  */
-asynStatus ADKinetix::writeInt32(asynUser *pasynUser, epicsInt32 value) {
-    const char *functionName = "writeInt32";
-    int function = pasynUser->reason;
+asynStatus ADKinetix::writeInt32(asynUser* pasynUser, epicsInt32 value) {    int function = pasynUser->reason;
     int currentExpRes, acquiring;
     asynStatus status = asynSuccess;
 
@@ -1147,9 +1083,9 @@ asynStatus ADKinetix::writeInt32(asynUser *pasynUser, epicsInt32 value) {
         status = setMinExpRes((KTX_MIN_EXP_RES) currentExpRes, (KTX_MIN_EXP_RES) value);
     } else if (function == KTX_FanSpeed) {
         if (acquiring == 0) {
-            if (PV_OK != pl_set_param(this->cameraContext->hcam, PARAM_FAN_SPEED_SETPOINT,
-                                      (void *) &value)) {
-                reportKinetixError(functionName);
+            if (PV_OK !=
+                pl_set_param(this->cameraContext->hcam, PARAM_FAN_SPEED_SETPOINT, (void*) &value)) {
+                reportKinetixError(__func__);
                 status = asynError;
             } else {
                 setStringParam(ADStatusMessage, "Updated fan speed");
@@ -1182,9 +1118,7 @@ asynStatus ADKinetix::writeInt32(asynUser *pasynUser, epicsInt32 value) {
  * @param value Value written to PV
  * @returns asynSuccess if write was successful, asynError otherwise
  */
-asynStatus ADKinetix::writeFloat64(asynUser *pasynUser, epicsFloat64 value) {
-    const char *functionName = "writeFloat64";
-    int function = pasynUser->reason;
+asynStatus ADKinetix::writeFloat64(asynUser* pasynUser, epicsFloat64 value) {    int function = pasynUser->reason;
     int status = asynSuccess;
 
     /* Set the parameter and readback in the parameter library.  This may be overwritten when we
@@ -1219,9 +1153,7 @@ asynStatus ADKinetix::writeFloat64(asynUser *pasynUser, epicsFloat64 value) {
  * @param fp Open file pointer (stdout)
  * @param details Level of details to print.
  */
-void ADKinetix::report(FILE *fp, int details) {
-    const char *functionName = "report";
-
+void ADKinetix::report(FILE* fp, int details) {
     DEBUG("Logging driver information...");
 
     fprintf(fp, "Kinetix %s\n", this->portName);
@@ -1242,7 +1174,6 @@ void ADKinetix::report(FILE *fp, int details) {
  * @brief ADKinetix destructor, called on exit to cleanup spawned threads.
  */
 ADKinetix::~ADKinetix() {
-    const char *functionName = "~ADKinetix";
 
     // Stop acquisiton if active
     this->acquireStop();
@@ -1263,7 +1194,7 @@ ADKinetix::~ADKinetix() {
 
     // uninitialize SDK
     printf("Uninitializing SDK...\n");
-    if (!pl_pvcam_uninit()) reportKinetixError(functionName);
+    if (!pl_pvcam_uninit()) reportKinetixError(__func__);
     printf("Done.\n");
 }
 
@@ -1272,7 +1203,7 @@ ADKinetix::~ADKinetix() {
  *
  * @param functionName Name of PVCam SDK function
  */
-void ADKinetix::reportKinetixError(const char *functionName) {
+void ADKinetix::reportKinetixError(const char* functionName) {
     int16 code;
     char error[256];
 
@@ -1289,11 +1220,11 @@ void ADKinetix::reportKinetixError(const char *functionName) {
 /* ADKinetixConfig */
 static const iocshArg ADKinetixConfigArg0 = {"DeviceIndex", iocshArgInt};
 static const iocshArg ADKinetixConfigArg1 = {"Port name", iocshArgString};
-static const iocshArg *const ADKinetixConfigArgs[] = {&ADKinetixConfigArg0, &ADKinetixConfigArg1};
+static const iocshArg* const ADKinetixConfigArgs[] = {&ADKinetixConfigArg0, &ADKinetixConfigArg1};
 
 static const iocshFuncDef configKinetix = {"ADKinetixConfig", 2, ADKinetixConfigArgs};
 
-static void configKinetixCallFunc(const iocshArgBuf *args) {
+static void configKinetixCallFunc(const iocshArgBuf* args) {
     ADKinetixConfig(args[0].ival, args[1].sval);
 }
 

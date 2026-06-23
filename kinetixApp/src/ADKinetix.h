@@ -16,7 +16,7 @@
 
 // Driver version numbers
 #define ADKINETIX_VERSION 1
-#define ADKINETIX_REVISION 3
+#define ADKINETIX_REVISION 4
 #define ADKINETIX_MODIFICATION 0
 
 // Standard Includes
@@ -58,28 +58,77 @@
 // Driver name
 static const char* driverName = "ADKinetix";
 
-// Temperature and Fan signals
-#define KTX_TemperatureString "KTX_TEMP"
-#define KTX_FanSpeedString "KTX_FAN_SPEED"
+// Error message formatters
+#define ERR(msg)                                      \
+    if (this->getLogLevel() >= KTXLogLevel::ERROR) \
+        fprintf(stderr, "ERROR | %s::%s: %s\n", driverName, __func__, msg);
 
-// Acquisition new frame timeout signals
-#define KTX_StopAcqOnTimeoutString "KTX_STOP_ACQ_ON_TO"
-#define KTX_WaitForFrameTimeoutString "KTX_WAIT_FOR_FRAME_TO"
+#define ERR_ARGS(fmt, ...)                            \
+    if (this->getLogLevel() >= KTXLogLevel::ERROR) \
+        fprintf(stderr, "ERROR | %s::%s: " fmt "\n", driverName, __func__, __VA_ARGS__);
 
-// Communication interface signal
-#define KTX_CommInterfaceString "KTX_INTERFACE"
+#define ERR_TO_STATUS(fmt, ...)                                       \
+    if (this->getLogLevel() >= KTXLogLevel::ERROR) {               \
+        char errMsg[256];                                             \
+        snprintf(errMsg, sizeof(errMsg), fmt, __VA_ARGS__);           \
+        printf("ERROR | %s::%s: %s\n", driverName, __func__, errMsg); \
+        setStringParam(ADStatusMessage, errMsg);                      \
+        setIntegerParam(ADStatus, ADStatusError);                     \
+        callParamCallbacks();                                         \
+    }
 
-// Readout mode signals
-#define KTX_MinExpResString "KTX_MIN_EXP_RES"
-#define KTX_ReadoutModeString "KTX_READOUT_MODE"
-#define KTX_ApplyReadoutModeString "KTX_APPLY_MODE"
-#define KTX_ModeValidString "KTX_MODE_VALID"
-#define KTX_ReadoutPortIdxString "KTX_READOUT_PORT_IDX"
-#define KTX_ReadoutPortDescString "KTX_READOUT_PORT_DESC"
-#define KTX_SpeedIdxString "KTX_SPEED_IDX"
-#define KTX_SpeedDescString "KTX_SPEED_DESC"
-#define KTX_GainIdxString "KTX_GAIN_IDX"
-#define KTX_GainDescString "KTX_GAIN_DESC"
+// Warning message formatters
+#define WARN(msg)                                       \
+    if (this->getLogLevel() >= KTXLogLevel::WARNING) \
+        fprintf(stderr, "WARNING | %s::%s: %s\n", driverName, __func__, msg);
+
+#define WARN_ARGS(fmt, ...)                             \
+    if (this->getLogLevel() >= KTXLogLevel::WARNING) \
+        fprintf(stderr, "WARNING | %s::%s: " fmt "\n", driverName, __func__, __VA_ARGS__);
+
+#define WARN_TO_STATUS(fmt, ...)                                         \
+    if (this->getLogLevel() >= KTXLogLevel::WARNING) {                \
+        char warnMsg[256];                                               \
+        snprintf(warnMsg, sizeof(warnMsg), fmt, __VA_ARGS__);            \
+        printf("WARNING | %s::%s: %s\n", driverName, __func__, warnMsg); \
+        setStringParam(ADStatusMessage, warnMsg);                        \
+        callParamCallbacks();                                            \
+    }
+
+// Info message formatters
+#define INFO(msg)                                    \
+    if (this->getLogLevel() >= KTXLogLevel::INFO) \
+        fprintf(stdout, "INFO | %s::%s: %s\n", driverName, __func__, msg);
+
+#define INFO_ARGS(fmt, ...)                          \
+    if (this->getLogLevel() >= KTXLogLevel::INFO) \
+        fprintf(stdout, "INFO | %s::%s: " fmt "\n", driverName, __func__, __VA_ARGS__);
+
+#define INFO_TO_STATUS(fmt, ...)                                      \
+    if (this->getLogLevel() >= KTXLogLevel::INFO) {                \
+        char infoMsg[256];                                            \
+        snprintf(infoMsg, sizeof(infoMsg), fmt, __VA_ARGS__);         \
+        printf("INFO | %s::%s: %s\n", driverName, __func__, infoMsg); \
+        setStringParam(ADStatusMessage, infoMsg);                     \
+        callParamCallbacks();                                         \
+    }
+
+// Debug message formatters
+#define DEBUG(msg)                                    \
+    if (this->getLogLevel() >= KTXLogLevel::DEBUG) \
+        fprintf(stdout, "DEBUG | %s::%s: %s\n", driverName, __func__, msg);
+
+#define DEBUG_ARGS(fmt, ...)                          \
+    if (this->getLogLevel() >= KTXLogLevel::DEBUG) \
+        fprintf(stdout, "DEBUG | %s::%s: " fmt "\n", driverName, __func__, __VA_ARGS__);
+
+enum class KTXLogLevel {
+    NONE = 0,      // No logging
+    ERROR = 10,    // Error messages only
+    WARNING = 20,  // Warnings and errors
+    INFO = 30,     // Info, warnings, and errors
+    DEBUG = 40     // Debugging information
+};
 
 // Three supported trigger modes
 typedef enum {
@@ -125,28 +174,14 @@ class ADKinetix : public ADDriver {
     void acquisitionThread();
     ~ADKinetix();
     bool waitForEofEvent(uns32 timeoutMs);
+    KTXLogLevel getLogLevel() { return this->logLevel; }
 
    protected:
-    int KTX_Temperature;
-#define FIRST_KTX_PARAM KTX_Temperature
-    int KTX_FanSpeed;
-    int KTX_StopAcqOnTimeout;
-    int KTX_WaitForFrameTimeout;
-    int KTX_CommInterface;
-    int KTX_MinExpRes;
-    int KTX_ReadoutMode;
-    int KTX_ApplyReadoutMode;
-    int KTX_ModeValid;
-    int KTX_ReadoutPortIdx;
-    int KTX_ReadoutPortDesc;
-    int KTX_SpeedIdx;
-    int KTX_SpeedDesc;
-    int KTX_GainIdx;
-    int KTX_GainDesc;
-#define LAST_KTX_PARAM KTX_GainDesc
+#include "ADKinetixParamDefs.h"
 
    private:
     void reportKinetixError(const char* functionName);
+    void createAllParams();
 
     bool isParamAvailable(int16 hcam, uns32 paramID, const char* paramName);
     bool readEnumeration(int16 hcam, NVPC* pNvpc, uns32 paramID, const char* paramName);
@@ -163,6 +198,7 @@ class ADKinetix : public ADDriver {
     asynStatus setMinExpRes(KTX_MIN_EXP_RES currentExpRes, KTX_MIN_EXP_RES minExpRes);
 
     NDDataType_t getCurrentNDBitDepth();
+    KTXLogLevel logLevel = KTXLogLevel::INFO;
     CameraContext* cameraContext;
     bool acquisitionActive = false;
     bool speedTableModeSelected = false;
@@ -172,7 +208,5 @@ class ADKinetix : public ADDriver {
     void* frameBuffer = nullptr;
     epicsThreadId monitorThreadId, acquisitionThreadId;
 };
-
-#define NUM_KTX_PARAMS ((int) (&LAST_KTX_PARAM - &FIRST_KTX_PARAM + 1))
 
 #endif

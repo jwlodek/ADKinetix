@@ -117,7 +117,7 @@ record(ai, "$(P)$(R)AcquirePeriod_RBV") {
 
 record(bo, "$(P)$(R)StopAcqOnTimeout") {
     field(DTYP, "asynInt32")
-    field(OUT,  "@asyn($(PORT),$(ADDR=0),$(TIMEOUT=1))KTX_STOP_ACQ_ON_TO")
+    field(OUT,  "@asyn($(PORT),$(ADDR=0),$(TIMEOUT=1))KTX_STOP_ACQ_ON_TIMEOUT")
     field(ZNAM, "No")
     field(ONAM, "Yes")
     field(VAL, "0")
@@ -127,31 +127,31 @@ record(bo, "$(P)$(R)StopAcqOnTimeout") {
 
 record(bi, "$(P)$(R)StopAcqOnTimeout_RBV") {
     field(DTYP, "asynInt32")
-    field(INP,  "@asyn($(PORT),$(ADDR=0),$(TIMEOUT=1))KTX_STOP_ACQ_ON_TO")
+    field(INP,  "@asyn($(PORT),$(ADDR=0),$(TIMEOUT=1))KTX_STOP_ACQ_ON_TIMEOUT")
     field(ZNAM, "No")
     field(ONAM, "Yes")
     field(SCAN, "I/O Intr")
 }
 
 
-record(ao, "$(P)$(R)WaitForFrameTO") {
+record(ao, "$(P)$(R)WaitForFrameTimeout") {
     field(DTYP, "asynInt32")
-    field(OUT,  "@asyn($(PORT),$(ADDR=0),$(TIMEOUT=1))KTX_WAIT_FOR_FRAME_TO")
+    field(OUT,  "@asyn($(PORT),$(ADDR=0),$(TIMEOUT=1))KTX_WAIT_FOR_FRAME_TIMEOUT")
     field(VAL, "500")
     field(PINI, "YES")
 }
 
 
-record(ai, "$(P)$(R)WaitForFrameTO_RBV") {
+record(ai, "$(P)$(R)WaitForFrameTimeout_RBV") {
     field(DTYP, "asynInt32")
-    field(INP,  "@asyn($(PORT),$(ADDR=0),$(TIMEOUT=1))KTX_WAIT_FOR_FRAME_TO")
+    field(INP,  "@asyn($(PORT),$(ADDR=0),$(TIMEOUT=1))KTX_WAIT_FOR_FRAME_TIMEOUT")
     field(SCAN, "I/O Intr")
 }
 
 
 record(ai, "$(P)$(R)Temperature_RBV") {
     field(DTYP, "asynFloat64")
-    field(INP,  "@asyn($(PORT),$(ADDR=0),$(TIMEOUT=1))KTX_TEMP")
+    field(INP,  "@asyn($(PORT),$(ADDR=0),$(TIMEOUT=1))KTX_TEMPERATURE")
     field(PREC, "3")
     field(SCAN, "I/O Intr")
 }
@@ -310,7 +310,7 @@ record(stringin, "$(P)$(R)GainDesc_RBV") {
 record(bo, "$(P)$(R)ApplyReadoutMode") {
     field(DTYP, "asynInt32")
     field(DESC, "Apply currently selected operating mode")
-    field(OUT, "@asyn($(PORT),$(ADDR=0),$(TIMEOUT=1))KTX_APPLY_MODE")
+    field(OUT, "@asyn($(PORT),$(ADDR=0),$(TIMEOUT=1))KTX_APPLY_READOUT_MODE")
     field(ZNAM, "Cancel")
     field(ONAM, "Apply")
     field(VAL,  "0")
@@ -330,7 +330,7 @@ record(bi, "$(P)$(R)ReadoutModeValid_RBV") {
 record(mbbi, "$(P)$(R)SelectedInterface_RBV") {
     field(DTYP, "asynInt32")
     field(DESC, "Current camera communication interface")
-    field(INP, "@asyn($(PORT),$(ADDR=0),$(TIMEOUT=1))KTX_INTERFACE")
+    field(INP, "@asyn($(PORT),$(ADDR=0),$(TIMEOUT=1))KTX_COMM_INTERFACE")
     field(ZRST, "Unknown")
     field(ZRVL, "0")
     field(ONST, "USB")
