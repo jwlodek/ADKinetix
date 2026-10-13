@@ -148,12 +148,12 @@ struct CameraContext {
 
     // Event used for communication between acq. loop and EOF callback routine
     Event eofEvent{};
+    // Number of EOF events not yet consumed by the acquisition thread, guarded by eofEvent.mutex
+    uns32 pendingFrames{0};
     // Storage for a code sample specific context data if needed for callback acquisition
     void* eofContext{nullptr};
-    // Frame info structure used to store data, for example, in EOF callback handlers
+    // Frame info of the most recent EOF event, guarded by eofEvent.mutex
     FRAME_INFO eofFrameInfo{};
-    // The address of latest frame stored, for example, in EOF callback handlers
-    void* eofFrame{nullptr};
 
     // Used as an acquisition thread or for other independent tasks
     std::thread* thread{nullptr};
