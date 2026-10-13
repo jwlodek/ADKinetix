@@ -540,11 +540,8 @@ ADKinetix::ADKinetix(int deviceIndex, const char *portName)
     createParam(KTX_GainIdxString, asynParamInt32, &KTX_GainIdx);
     createParam(KTX_GainDescString, asynParamOctet, &KTX_GainDesc);
     createParam(KTX_DroppedFramesString, asynParamInt32, &KTX_DroppedFrames);
-    setIntegerParam(KTX_DroppedFrames, 0);
     createParam(KTX_PendingFramesString, asynParamInt32, &KTX_PendingFrames);
-    setIntegerParam(KTX_PendingFrames, 0);
     createParam(KTX_UniqueIdSourceString, asynParamInt32, &KTX_UniqueIdSource);
-    setIntegerParam(KTX_UniqueIdSource, KTX_UID_FRAME_NR);
     createParam(KTX_CircBuffSizeString, asynParamInt32, &KTX_CircBuffSize);
 
     // Initialize the PVCam SDK
