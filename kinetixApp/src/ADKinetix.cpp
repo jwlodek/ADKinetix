@@ -544,6 +544,9 @@ ADKinetix::ADKinetix(int deviceIndex, const char *portName)
     createParam(KTX_UniqueIdSourceString, asynParamInt32, &KTX_UniqueIdSource);
     createParam(KTX_CircBuffSizeString, asynParamInt32, &KTX_CircBuffSize);
 
+    setIntegerParam(KTX_DroppedFrames, 0);
+    setIntegerParam(KTX_PendingFrames, 0);
+
     // Initialize the PVCam SDK
     if (!pl_pvcam_init()) {
         reportKinetixError(functionName);
@@ -717,14 +720,19 @@ void ADKinetix::monitorThread() {
         if (!this->acquisitionActive) {
             this->pollingTemperature = true;
             int16 temperature = 0;
-            if (PV_OK != pl_get_param(this->cameraContext->hcam, PARAM_TEMP, ATTR_CURRENT,
-                                      (void *) &temperature)) {
+            bool ok = PV_OK == pl_get_param(this->cameraContext->hcam, PARAM_TEMP, ATTR_CURRENT,
+                                            (void *) &temperature);
+            // Clear before locking: acquisitionThread spins on this flag while holding the lock
+            this->pollingTemperature = false;
+
+            this->lock();
+            if (!ok) {
                 reportKinetixError(functionName);
             } else {
                 setDoubleParam(KTX_Temperature, (double) (temperature / 100.0));
                 callParamCallbacks();
             }
-            this->pollingTemperature = false;
+            this->unlock();
         }
 
         epicsThreadSleep(1);
@@ -762,9 +770,11 @@ void ADKinetix::acquireStop() {
         // Mark acquisition as inactive
         this->acquisitionActive = false;
 
-        // Wait for acquisition thread to join
+        // Acquisition thread needs the port lock to finish, so release it while joining
         INFO("Waiting for acquisition thread to join...");
+        this->unlock();
         epicsThreadMustJoin(this->acquisitionThreadId);
+        this->lock();
         INFO("Acquisition stopped.");
 
         // Refresh all PV values
@@ -858,6 +868,8 @@ void ADKinetix::acquisitionThread() {
     size_t dims[2];
     NDColorMode_t colorMode = NDColorModeMono;  // only grayscale at the moment
     NDDataType_t dataType;
+
+    this->lock();
     getIntegerParam(NDDataType, (int *) &dataType);
 
     getCurrentFrameDimensions(dims);
@@ -868,6 +880,7 @@ void ADKinetix::acquisitionThread() {
         setIntegerParam(ADStatus, ADStatusError);
         setIntegerParam(ADAcquire, 0);
         callParamCallbacks();
+        this->unlock();
         return;
     }
 
@@ -974,7 +987,9 @@ void ADKinetix::acquisitionThread() {
         getIntegerParam(ADNumImagesCounter, &collectedImages);
 
         // Wait for new frame EOF event notification from callback
+        this->unlock();
         eofSuccess = this->waitForEofEvent((uns32) waitForFrameTO, &pendingFrames);
+        this->lock();
         setIntegerParam(KTX_PendingFrames, (int) pendingFrames);
         if (eofSuccess) {
             void *pFrame = this->frameBuffer;
@@ -1098,6 +1113,7 @@ void ADKinetix::acquisitionThread() {
     setIntegerParam(ADAcquire, 0);
     setIntegerParam(KTX_PendingFrames, 0);
     callParamCallbacks();
+    this->unlock();
 }
 
 /**
@@ -1330,8 +1346,10 @@ void ADKinetix::report(FILE *fp, int details) {
 ADKinetix::~ADKinetix() {
     const char *functionName = "~ADKinetix";
 
-    // Stop acquisiton if active
+    // Stop acquisiton if active; acquireStop expects the port lock to be held
+    this->lock();
     this->acquireStop();
+    this->unlock();
 
     // shut down separate threads
     this->monitoringActive = false;
