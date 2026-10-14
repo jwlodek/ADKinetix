@@ -544,9 +544,6 @@ ADKinetix::ADKinetix(int deviceIndex, const char *portName)
     createParam(KTX_UniqueIdSourceString, asynParamInt32, &KTX_UniqueIdSource);
     createParam(KTX_CircBuffSizeString, asynParamInt32, &KTX_CircBuffSize);
 
-    setIntegerParam(KTX_DroppedFrames, 0);
-    setIntegerParam(KTX_PendingFrames, 0);
-
     // Initialize the PVCam SDK
     if (!pl_pvcam_init()) {
         reportKinetixError(functionName);
@@ -1073,8 +1070,10 @@ void ADKinetix::acquisitionThread() {
             // Sends image to the ArrayDataPV
             getAttributes(pArray->pAttributeList);
 
-            // Perform callbacks on collected frame
+            // Perform callbacks on collected frame; plugins must not run under the driver lock
+            this->unlock();
             doCallbacksGenericPointer(pArray, NDArrayData, 0);
+            this->lock();
 
             // If in single mode, finish acq, if in multiple mode and reached target number
             // complete acquisition.
