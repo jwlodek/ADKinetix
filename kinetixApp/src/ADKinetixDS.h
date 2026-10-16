@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 #include <condition_variable>
+#include <deque>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -148,12 +149,10 @@ struct CameraContext {
 
     // Event used for communication between acq. loop and EOF callback routine
     Event eofEvent{};
-    // Number of EOF events not yet consumed by the acquisition thread, guarded by eofEvent.mutex
-    uns32 pendingFrames{0};
+    // FrameNr of each EOF event not yet consumed by the acquisition thread, guarded by eofEvent.mutex
+    std::deque<int32> pendingFrameNrs{};
     // Storage for a code sample specific context data if needed for callback acquisition
     void* eofContext{nullptr};
-    // Frame info of the most recent EOF event, guarded by eofEvent.mutex
-    FRAME_INFO eofFrameInfo{};
 
     // Used as an acquisition thread or for other independent tasks
     std::thread* thread{nullptr};

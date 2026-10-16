@@ -140,7 +140,7 @@ class ADKinetix : public ADDriver {
     void monitorThread();
     void acquisitionThread();
     ~ADKinetix();
-    bool waitForEofEvent(uns32 timeoutMs, uns32* pendingFrames);
+    bool waitForEofEvent(uns32 timeoutMs, uns32* pendingFrames, int32* frameNr);
 
    protected:
     int KTX_Temperature;

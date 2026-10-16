@@ -91,10 +91,11 @@ static void exitCallbackC(void *drvPvt) {
  *
  * @param timeoutMs Time to wait before returning in ms
  * @param pendingFrames Set to the number of frames still pending after this call
+ * @param frameNr Set to the camera FrameNr of the consumed EOF event
  * @return true if frame successfully was awaited
  * @return false if acquisition was aborted or timed out
  */
-bool ADKinetix::waitForEofEvent(uns32 timeoutMs, uns32 *pendingFrames) {
+bool ADKinetix::waitForEofEvent(uns32 timeoutMs, uns32 *pendingFrames, int32 *frameNr) {
     const char *functionName = "waitForEofEvent";
 
     std::unique_lock<std::mutex> lock(this->cameraContext->eofEvent.mutex);
@@ -102,18 +103,19 @@ bool ADKinetix::waitForEofEvent(uns32 timeoutMs, uns32 *pendingFrames) {
         this->cameraContext;  // For lambda we need temporary local reference to ctx pointer
     this->cameraContext->eofEvent.cond.wait_for(
         lock, std::chrono::milliseconds(timeoutMs),
-        [ctx]() { return ctx->pendingFrames > 0 || ctx->threadAbortFlag; });
-    *pendingFrames = this->cameraContext->pendingFrames;
+        [ctx]() { return !ctx->pendingFrameNrs.empty() || ctx->threadAbortFlag; });
+    *pendingFrames = (uns32) this->cameraContext->pendingFrameNrs.size();
     if (!this->acquisitionActive) {
         DEBUG_ARGS("Acquisition completed on camera %d\n", this->cameraContext->hcam);
         return false;
     }
-    if (this->cameraContext->pendingFrames == 0) {
+    if (this->cameraContext->pendingFrameNrs.empty()) {
         WARN_ARGS("Camera %d timed out waiting for a frame\n", this->cameraContext->hcam);
         return false;
     }
-    this->cameraContext->pendingFrames--;
-    *pendingFrames = this->cameraContext->pendingFrames;
+    *frameNr = this->cameraContext->pendingFrameNrs.front();
+    this->cameraContext->pendingFrameNrs.pop_front();
+    *pendingFrames = (uns32) this->cameraContext->pendingFrameNrs.size();
     return true;
 }
 
@@ -456,11 +458,10 @@ void ADKinetix::updateImageFormat() {
 static void PV_DECL newFrameCallback(FRAME_INFO *pFrameInfo, CameraContext *ctx) {
     if (ctx == nullptr) return;
 
-    // Count every EOF so back-to-back frames are not coalesced into one event
+    // Queue every EOF so back-to-back frames are not coalesced into one event
     {
         std::lock_guard<std::mutex> lock(ctx->eofEvent.mutex);
-        if (pFrameInfo != nullptr) ctx->eofFrameInfo = *pFrameInfo;
-        ctx->pendingFrames++;
+        ctx->pendingFrameNrs.push_back(pFrameInfo != nullptr ? pFrameInfo->FrameNr : -1);
     }
 
     // Notify acquisition thread of new frame event
@@ -921,7 +922,7 @@ void ADKinetix::acquisitionThread() {
     // Discard any EOF events left over from a previous acquisition
     {
         std::lock_guard<std::mutex> lock(this->cameraContext->eofEvent.mutex);
-        this->cameraContext->pendingFrames = 0;
+        this->cameraContext->pendingFrameNrs.clear();
         this->cameraContext->threadAbortFlag = false;
     }
 
@@ -985,7 +986,7 @@ void ADKinetix::acquisitionThread() {
 
         // Wait for new frame EOF event notification from callback
         this->unlock();
-        eofSuccess = this->waitForEofEvent((uns32) waitForFrameTO, &pendingFrames);
+        eofSuccess = this->waitForEofEvent((uns32) waitForFrameTO, &pendingFrames, &frameNr);
         this->lock();
         setIntegerParam(KTX_PendingFrames, (int) pendingFrames);
         if (eofSuccess) {
@@ -998,25 +999,27 @@ void ADKinetix::acquisitionThread() {
                     // EOF count no longer matches buffered frames; resync on the next EOF
                     {
                         std::lock_guard<std::mutex> lock(this->cameraContext->eofEvent.mutex);
-                        this->cameraContext->pendingFrames = 0;
+                        this->cameraContext->pendingFrameNrs.clear();
                     }
                     setIntegerParam(KTX_PendingFrames, 0);
                     callParamCallbacks();
                     continue;
                 }
 
-                frameNr = pFrameInfo->FrameNr;
-                if (lastFrameNr >= 0 && pFrameInfo->FrameNr > lastFrameNr + 1) {
-                    int missed = pFrameInfo->FrameNr - lastFrameNr - 1;
+                // TEMP DEBUG: compare EOF callback FrameNr with get_oldest_frame_ex FrameNr
+                printf("FRAMENR_DEBUG eof=%d oldest=%d pending=%u ts=%lld%s\n", (int) frameNr,
+                       (int) pFrameInfo->FrameNr, (unsigned) pendingFrames,
+                       (long long) pFrameInfo->TimeStamp,
+                       (frameNr != pFrameInfo->FrameNr) ? " MISMATCH" : "");
+
+                if (lastFrameNr >= 0 && frameNr > lastFrameNr + 1) {
+                    int missed = frameNr - lastFrameNr - 1;
                     droppedFrames += missed;
                     setIntegerParam(KTX_DroppedFrames, droppedFrames);
                     WARN_ARGS("Dropped %d frame(s) between frame %d and frame %d", missed,
-                              lastFrameNr, pFrameInfo->FrameNr);
+                              lastFrameNr, frameNr);
                 }
-                lastFrameNr = pFrameInfo->FrameNr;
-            } else {
-                std::lock_guard<std::mutex> lock(this->cameraContext->eofEvent.mutex);
-                frameNr = this->cameraContext->eofFrameInfo.FrameNr;
+                lastFrameNr = frameNr;
             }
 
             // Allocate the NDArray of the correct size
