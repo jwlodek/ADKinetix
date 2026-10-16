@@ -1007,9 +1007,10 @@ void ADKinetix::acquisitionThread() {
                 }
 
                 // TEMP DEBUG: compare EOF callback FrameNr with get_oldest_frame_ex FrameNr
-                printf("FRAMENR_DEBUG eof=%d oldest=%d pending=%u ts=%lld%s\n", (int) frameNr,
+                printf("FRAMENR_DEBUG eof=%d oldest=%d pending=%u ts=%lld slot=%ld%s\n", (int) frameNr,
                        (int) pFrameInfo->FrameNr, (unsigned) pendingFrames,
                        (long long) pFrameInfo->TimeStamp,
+                       (long) (((uns8 *) pFrame - (uns8 *) this->frameBuffer) / frameBufferSize),
                        (frameNr != pFrameInfo->FrameNr) ? " MISMATCH" : "");
 
                 if (lastFrameNr >= 0 && frameNr > lastFrameNr + 1) {
