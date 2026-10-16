@@ -901,7 +901,7 @@ void ADKinetix::acquisitionThread() {
     else
         pvcamExposureMode = EXT_TRIG_LEVEL | EXPOSE_OUT_FIRST_ROW;
 
-    // Locked frames can't be overwritten mid-copy; overflows show up as FrameNr gaps instead
+    // On overrun PVCam still overwrites the oldest frame, but get_oldest_frame_ex then returns an error
     const int16 circBuffMode = CIRC_NO_OVERWRITE;
     const bool continuousMode = (acquisitionMode != ADImageSingle);
 
@@ -1006,13 +1006,7 @@ void ADKinetix::acquisitionThread() {
                     continue;
                 }
 
-                // TEMP DEBUG: compare EOF callback FrameNr with get_oldest_frame_ex FrameNr
-                printf("FRAMENR_DEBUG eof=%d oldest=%d pending=%u ts=%lld slot=%ld%s\n", (int) frameNr,
-                       (int) pFrameInfo->FrameNr, (unsigned) pendingFrames,
-                       (long long) pFrameInfo->TimeStamp,
-                       (long) (((uns8 *) pFrame - (uns8 *) this->frameBuffer) / frameBufferSize),
-                       (frameNr != pFrameInfo->FrameNr) ? " MISMATCH" : "");
-
+                // get_oldest_frame_ex fills FRAME_INFO for the newest frame, so use the EOF callback's FrameNr
                 if (lastFrameNr >= 0 && frameNr > lastFrameNr + 1) {
                     int missed = frameNr - lastFrameNr - 1;
                     droppedFrames += missed;
